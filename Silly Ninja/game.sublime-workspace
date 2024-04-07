@@ -1,0 +1,858 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"forma",
+				"FORMAT"
+			],
+			[
+				"lo",
+				"Lock"
+			],
+			[
+				"connectionre",
+				"ConnectionResetError"
+			],
+			[
+				"cli",
+				"client_socket"
+			],
+			[
+				"ConnectionR",
+				"ConnectionRefusedError"
+			],
+			[
+				"__name",
+				"__name__ == \"__main__\":"
+			],
+			[
+				"l",
+				"lower()"
+			],
+			[
+				"connec",
+				"connection"
+			],
+			[
+				"th",
+				"Thread"
+			],
+			[
+				"form",
+				"FORMAT"
+			],
+			[
+				"scok",
+				"SocketServer"
+			],
+			[
+				"get",
+				"get_public_ip"
+			],
+			[
+				"ser",
+				"SERVER_IP"
+			],
+			[
+				"res",
+				"response_json"
+			],
+			[
+				"te",
+				"text"
+			],
+			[
+				"stat",
+				"status_code == 200:"
+			],
+			[
+				"disco",
+				"DISCONNECT_MESSAGE"
+			],
+			[
+				"FORM",
+				"FORMAT"
+			],
+			[
+				"conne",
+				"connection"
+			],
+			[
+				"mee",
+				"message"
+			],
+			[
+				"sen",
+				"send"
+			],
+			[
+				"enco",
+				"ENCODE_FORMAT"
+			],
+			[
+				"encode",
+				"ENCODE_FORMAT"
+			],
+			[
+				"se",
+				"SERVER_ADDRESS"
+			],
+			[
+				"server",
+				"SERVER_ADDRESS"
+			],
+			[
+				"sere",
+				"SERVER_IP"
+			],
+			[
+				"disc",
+				"DISCONNECT_MESSAGE"
+			],
+			[
+				"heade",
+				"HEADER"
+			],
+			[
+				"active",
+				"activeCount"
+			],
+			[
+				"add",
+				"ADDRESS"
+			],
+			[
+				"sock",
+				"SOCK_DGRAM"
+			],
+			[
+				"co",
+				"connect"
+			],
+			[
+				"dis",
+				"display_silhouette,"
+			],
+			[
+				"set",
+				"setcolor="
+			],
+			[
+				"displa",
+				"display"
+			],
+			[
+				"src",
+				"SRCALPHA"
+			],
+			[
+				"clre",
+				"clear"
+			],
+			[
+				"set_",
+				"set_colorkey"
+			],
+			[
+				"scr",
+				"screenshake"
+			],
+			[
+				"sc",
+				"screenshake"
+			],
+			[
+				"scre",
+				"screenshake"
+			],
+			[
+				"star",
+				"start_frame="
+			],
+			[
+				"alive",
+				"alive_time"
+			],
+			[
+				"visual",
+				"visual_effects"
+			],
+			[
+				"reder",
+				"render_scroll"
+			],
+			[
+				"map",
+				"MAP_ID"
+			],
+			[
+				"collide",
+				"collidepoint"
+			],
+			[
+				"das",
+				"dashing"
+			],
+			[
+				"solid",
+				"solid_check"
+			],
+			[
+				"load",
+				"load_image"
+			],
+			[
+				"fa",
+				"facing_left"
+			],
+			[
+				"fac",
+				"facing_left"
+			],
+			[
+				"physi",
+				"PHYSICS_TILES"
+			],
+			[
+				"tile",
+				"tile_size), int(pos[1] // self.tile_size"
+			],
+			[
+				"facing",
+				"facing_left"
+			],
+			[
+				"moven",
+				"movement"
+			],
+			[
+				"__init",
+				"__init__(game, pos, size)"
+			],
+			[
+				"ph",
+				"PhysicsEntity"
+			],
+			[
+				"va",
+				"variant"
+			],
+			[
+				"start",
+				"start_frame"
+			],
+			[
+				"p",
+				"pi"
+			],
+			[
+				"sin",
+				"sin(angle) * speed]"
+			],
+			[
+				"K_ls",
+				"K_LSHIFT"
+			],
+			[
+				"last",
+				"last_movement"
+			],
+			[
+				"leaf",
+				"leaf_spawners"
+			],
+			[
+				"up",
+				"update"
+			],
+			[
+				"animati",
+				"Animation"
+			],
+			[
+				"ex",
+				"extract"
+			],
+			[
+				"typ",
+				"type, self.variant, self.pos"
+			],
+			[
+				"lef",
+				"left_control"
+			],
+			[
+				"left",
+				"left_control"
+			],
+			[
+				"ne",
+				"neighbors"
+			],
+			[
+				"rule",
+				"RULETILE_MAP"
+			],
+			[
+				"RULE",
+				"RULETILE_MAP"
+			],
+			[
+				"AUTO",
+				"AUTO_TILES"
+			],
+			[
+				"a",
+				"add"
+			],
+			[
+				"til",
+				"tile_loc]"
+			],
+			[
+				"off",
+				"offgrid_tiles"
+			],
+			[
+				"mapda",
+				"map_data"
+			],
+			[
+				"File",
+				"FileNotFoundError"
+			],
+			[
+				"__di",
+				"__dict__(self):"
+			],
+			[
+				"K_Lc",
+				"K_LCTRL"
+			],
+			[
+				"tilem",
+				"tilemap, \"tile"
+			],
+			[
+				"ope",
+				"open(path, 'w')"
+			],
+			[
+				"camera",
+				"camera_scroll"
+			],
+			[
+				"cam",
+				"camera_scroll"
+			],
+			[
+				"offgr",
+				"offgrid_tiles"
+			],
+			[
+				"apped",
+				"append"
+			],
+			[
+				"o",
+				"on_grid"
+			],
+			[
+				"curre",
+				"current_tile_image"
+			],
+			[
+				"on",
+				"on_grid"
+			],
+			[
+				"tile_",
+				"tile_size"
+			],
+			[
+				"render",
+				"RENDER_SCALE"
+			],
+			[
+				"group",
+				"current_tile_group"
+			],
+			[
+				"k_ls",
+				"K_LSHIFT"
+			],
+			[
+				"butt",
+				"button == 2:"
+			],
+			[
+				"mouse",
+				"MOUSEBUTTONDOWN"
+			],
+			[
+				"MapE",
+				"MapEditor"
+			],
+			[
+				"setac",
+				"set_action"
+			],
+			[
+				"air",
+				"air_time"
+			],
+			[
+				"update",
+				"update(tilemap, movement)"
+			],
+			[
+				"phys",
+				"PhysicsEntity"
+			],
+			[
+				"anim",
+				"anim_offset"
+			],
+			[
+				"image",
+				"image_duration="
+			],
+			[
+				"loadimage",
+				"load_images"
+			],
+			[
+				"ani",
+				"Animation"
+			],
+			[
+				"an",
+				"Animation"
+			],
+			[
+				"fram",
+				"frame_duration = frame_duration"
+			],
+			[
+				"ima",
+				"images"
+			],
+			[
+				"def",
+				"def __init__(self,"
+			],
+			[
+				"y_s",
+				"y_start, y_end):"
+			],
+			[
+				"choice",
+				"choice(cloud_images"
+			],
+			[
+				"cloud",
+				"cloud_images"
+			],
+			[
+				"cen",
+				"centerx"
+			],
+			[
+				"en",
+				"entity_rect"
+			],
+			[
+				"coll",
+				"colliderect"
+			],
+			[
+				"base",
+				"BASE_IMAGE_PATH"
+			],
+			[
+				"get_s",
+				"get_size"
+			],
+			[
+				"move",
+				"move_speed"
+			],
+			[
+				"colli",
+				"colliderect"
+			],
+			[
+				"set_colo",
+				"set_colorkey"
+			],
+			[
+				"keyu",
+				"KEYUP"
+			],
+			[
+				"pygame",
+				"pygame.KEY"
+			],
+			[
+				"s",
+				"sum_b)"
+			],
+			[
+				"sum",
+				"sum_b = self.b + other.b"
+			],
+			[
+				"self",
+				"self.a + other.a"
+			],
+			[
+				"func",
+				"Function_2"
+			],
+			[
+				"f",
+				"Function_2"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "Packages/Python/Python.sublime-build",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"pack",
+				"Package Control: Install Package"
+			],
+			[
+				"remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"LIST",
+				"Package Control: List Packages"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Remove Package"
+			],
+			[
+				"",
+				"Package Control: Install Package"
+			],
+			[
+				"pa",
+				"Package Control: List Packages"
+			],
+			[
+				"package control",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/V/Python Programming/Pygame/Silly Ninja/game.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/socket/client.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/socket/server.py",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/Python with Terminal.sublime-build",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/Anaconda/Default (Windows).sublime-keymap",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/clouds.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/tilemap.py",
+		"/V/Python Programming/Voice Assistance/Mona.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/entities.py",
+		"/V/Python Programming/Pygame/Silly Ninja/map_editor.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/visual_effects.py",
+		"/V/Python Programming/Voice Assistance/search_youtube.py",
+		"/V/Python Programming/Pygame/Event Handling/events.py",
+		"/V/Python Programming/NumPy/NumPy 1.py",
+		"/V/Python Programming/Voice Assistance/hieu.py",
+		"/D/Download/ninja_game/game.py",
+		"/V/Python Programming/Pygame/Silly Ninja/assets/maps/0.json",
+		"/V/Python Programming/Pygame/Silly Ninja/assets/maps/2.json",
+		"/V/Python Programming/Pygame/Silly Ninja/assets/maps/1.json",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/particle.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/animation.py",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/utils.py",
+		"/V/Python Programming/Pygame/Silly Ninja/assets/maps/test.json",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/d",
+		"/V/Python Programming/Pygame/Silly Ninja/scripts/tilemap",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/Anaconda/Anaconda.sublime-settings",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/TabNine.sublime-settings",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/Default.sublime-keymap",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/TabNine/Default.sublime-keymap",
+		"/V/Unity Builds/Laboratory_Of_Doom/WebGL Default Template/index.html",
+		"/C/WINDOWS/system32/https",
+		"/V/Unity Builds/Laboratory_Of_Doom/WebGL/index.html",
+		"/V/Unity Projects/test/README.md",
+		"/V/Unity Projects/test/.git/COMMIT_EDITMSG",
+		"/V/Python Programming/OOP/Lab_3_2_3/phtrinh.py",
+		"/V/Python Programming/Pygame/Snak3 Classic Old/snak3.py",
+		"/V/Python Programming/Pygame/Snak3 Classic/assets/framework.py",
+		"/V/Python Programming/Pygame/Snak3 Classic/snak3.py",
+		"/V/Python Programming/OOP/Lab_3_3_2/student.py",
+		"/V/Python Programming/Invent with Python/cipher.py",
+		"/V/Python Programming/Pygame/Platformer by Fluffy/Platformer.py",
+		"/V/Python Programming/Pygame/The Darkgeon/darkgeon.py",
+		"/V/Python Programming/Pygame/The Darkgeon/assets/engine.py",
+		"/V/Python Programming/Pygame/The Darkgeon/assets/utility_funcs.py",
+		"/V/Python Programming/OOP/access_modifier.py",
+		"/V/Python Programming/Pygame/Platformer by Fluffy/data/engine.py",
+		"/V/Python Programming/Pygame/Templates/pygame-beginner-template.py",
+		"/V/Python Programming/Utility Functions/clear_a_list.py",
+		"/V/Python Programming/Pygame/Snak3 Classic/assets/utility_funcs.py",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/CP.sublime-build",
+		"/V/C# Programming/HelloWorld.cs",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/C#.sublime-build",
+		"/V/Python Programming/Utility Functions/swap.py",
+		"/V/Python Programming/OOP/Lab_3_1_2/rectangle.py",
+		"/V/Python Programming/OOP/Lab_3_1_1/student_manage.py",
+		"/V/Python Programming/OOP/Lab_3_2_2/polygon.py",
+		"/V/Python Programming/Pygame/The Darkgeon/assets/framework.py",
+		"/V/Python Programming/Bai 3 - List trong Python/Modify_list.py",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/TabNine/TabNine.sublime-settings",
+		"/V/Python Programming/Ham trong Python/clear_a_list.py",
+		"/V/Python Programming/Pygame/InputText/input_text.py",
+		"/V/Python Programming/Ham trong Python/swap.py",
+		"/V/Python Programming/Bai 2 - Kieu chuoi trong Python/string_format.py",
+		"/V/Python Programming/Bai 2 - Kieu chuoi trong Python/Toan tu trong chuoi.py",
+		"/V/Python Programming/Pygame/Shockwave Effect/shockwave.py",
+		"/V/Python Programming/Pygame/Particles Test/particles.py",
+		"/V/Python Programming/Pygame/Sparkle VFX/spark.py",
+		"/V/Python Programming/Pygame/InputText/None",
+		"/V/Python Programming/Ham trong Python/lambda_function.py",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/User/Anaconda.sublime-settings",
+		"/C/Users/QUOC/AppData/Roaming/Sublime Text/Packages/Anaconda/README.md",
+		"/V/Python Programming/Pygame/Mini Racers/racers.py",
+		"/V/Python Programming/Pygame/Mini Racers/assets/utils.py",
+		"/G/Blackberry Honey/renpy/display/anim.py",
+		"/G/Blackberry Honey/Blackberry Honey.py",
+		"/V/Python Programming/Pygame/Collision with Tiles/collision.py",
+		"/V/Python Programming/Ham trong Python/Bien_toan_cuc.py",
+		"/V/Python Programming/OOP/Lab_3_4_1/admin.py",
+		"/V/Python Programming/OOP/Lab_3_3_3/account.py",
+		"/V/Python Programming/OOP/Lab_3_2_4/phanso.py",
+		"/V/Python Programming/OOP/Lab_3_1_4/daihoc.py",
+		"/V/Python Programming/OOP/Lab_3_1_4/thisinh.py",
+		"/V/Python Programming/Bai 3 - List trong Python/List.py",
+		"/V/Python Programming/OOP/Lab_3_4_2/car.py",
+		"/V/Python Programming/OOP/Lab_3_4_2/Actionable.py",
+		"/V/Python Programming/OOP/Lab_3_4_1/marketing.py",
+		"/V/Python Programming/OOP/Lab_3_4_1/staff.py",
+		"/V/Python Programming/Pygame/Rotating Images/rotate.py",
+		"/V/Python Programming/OOP/Lab_3_3_1/vehicle.py",
+		"/V/Python Programming/Pygame/Stickman Adventure/stickman.py",
+		"/V/Python Programming/OOP/Lab_3_2_1/smartphone.py",
+		"/V/Python Programming/OOP/Bai_1/student_manage.py",
+		"/V/Python Programming/Bai 7 - Dictionary trong Python/Dict.py",
+		"/V/Python Programming/Pygame/platformer_project_5/Platformer.py",
+		"/V/Python Programming/Pygame/platformer_project_5/data/engine.py",
+		"/V/Python Programming/Bai 1 - Kieu so trong Python/Starter.py",
+		"/V/Python Programming/Pygame/Stickman Adventure/Source_code.py",
+		"/V/Python Programming/Pygame/Snake Classic/snak3.py",
+		"/V/Python Programming/Pygame/Snake Classic/assets/framework.py",
+		"/C/Users/QUOC/AppData/Local/Programs/Python/Python39/Lib/site-packages/pafy/backend_youtube_dl.py",
+		"/V/Python Programming/Bai 3 - List trong Python/Nested_List.py",
+		"/V/Python Programming/Pygame/Mini Racers/assets/framework.py",
+		"/V/Python Programming/Ham trong Python/Bien toan cuc.py",
+		"/V/C++ Programming/He dieu hanh/FCFS/outputf.out",
+		"/V/C++ Programming/He dieu hanh/FCFS/inputf.in",
+		"/V/C++ Programming/He dieu hanh/FCFS/FCFS.cpp",
+		"/V/C++ Programming/He dieu hanh/inputf.in",
+		"/V/C++ Programming/He dieu hanh/outputf.out",
+		"/V/C++ Programming/He dieu hanh/FCFS.cpp",
+		"/V/Python Programming/Pygame/Sparkle VFX/Fluffy_spark.py",
+		"/V/Python Programming/Invent with Python/hangman.py",
+		"/V/Python Programming/The Hanging Man/hangman.py",
+		"/V/Python Programming/Pygame/Snake Classic/Source_code.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa8464.13011/engine.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa4068.23121/engine.py",
+		"/V/Python Programming/Pygame/Snake Classic/data/framework.py",
+		"/V/C++ Programming/He dieu hanh/Round_Robin.cpp",
+		"/V/Python Programming/test.cpp",
+		"/V/Python Programming/test.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa13208.45036/engine.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa10768.13931/Platformer.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa5880.30094/Platformer.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa5880.15726/Platformer.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa1224.40476/Platformer.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa9320.23726/engine.py",
+		"/V/Python Programming/Ham trong Python/Bien toan cuc",
+		"/V/Python Programming/Bai 4 - Tuple trong Python/Tuple.py",
+		"/C/Users/QUOC/AppData/Local/Temp/Rar$DIa10104.19910/engine.py"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 217.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": true,
+		"find_history":
+		[
+			"client",
+			"self.SERVER_ADDRESS",
+			"self.SERVER_IP",
+			"self.PORT",
+			"self.HEADER",
+			"format",
+			"sounds",
+			"set_colorkey",
+			"spa",
+			"spawner",
+			"off",
+			"Tile(",
+			"Tile",
+			"self.grid",
+			"self.tilemap",
+			"game",
+			"flip"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"self.client_socket",
+			"self.address",
+			"self.ip",
+			"self.port",
+			"self.header",
+			"self.map",
+			"self.grid"
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 35.0
+	},
+	"input":
+	{
+		"height": 92.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/Python/Python.sublime-build",
+	"project": "game.sublime-project",
+	"replace":
+	{
+		"height": 66.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 135.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 552.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 269.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

@@ -1,2 +1,4 @@
 # Silly_Ninja
-A multiplayer co-op game made with Pygame, assets credit goes to DaFluffyPotato
+
+## DESCRIPTION
+A multiplayer co-op game made with _Pygame_ and _Socket_, assets credit goes to _DaFluffyPotato_.
