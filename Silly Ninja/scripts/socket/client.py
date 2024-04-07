@@ -1,25 +1,60 @@
 import socket
+import threading
+import traceback
+import os
+from server import ClientDisconnectException
 
-HEADER = 64
 FORMAT = "utf-8"
-DISCONNECT_MESSAGE = "clt-disconnect"
+DISCONNECT_MESSAGE = "!leave"
+os.system("")  # Enable ANSI escape characters in terminal.
 
 class Client:
 	def __init__(self):
 		self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.server_ip = ""
 		self.port = 5050
-		self.address = ()
+		self.nickname = "Default_Client"
 
-	def send_message(self, msg):
-		send_message = msg.encode(FORMAT)
-		send_length = str(len(send_message)).encode(FORMAT)
 
-		# Pad the message with "blank" bytes to match the HEADER size.
-		send_length += b" " * (HEADER - len(send_length))
-		self.client_socket.send(send_length)
-		self.client_socket.send(send_message)
-		print(self.client_socket.recv(2048).decode(FORMAT))
+	def receive(self):
+		while True:
+			try:
+				message = self.client_socket.recv(1024).decode(FORMAT)
+				if message == "NICKNAME":
+					self.client_socket.send(self.nickname.encode(FORMAT))
+				elif message == DISCONNECT_MESSAGE:
+					raise ClientDisconnectException("You have disconnected from the server.")
+				else:
+					print(message)
+			
+			except ClientDisconnectException:
+				self.client_socket.close()
+				break
+			
+			except Exception:
+				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+				self.client_socket.close()
+				break
+
+
+	def send(self):
+		while True:
+			try:
+				message = f"{self.nickname}: {input()}"
+				print("\033[1A" + "\033[K", end='')  # Clear the submitted input line.
+				self.client_socket.send(message.encode(FORMAT))
+
+				if message.split(": ", 1)[1] == DISCONNECT_MESSAGE:
+					raise ClientDisconnectException("You have disconnected from the server.")
+			
+			except ClientDisconnectException as cde:
+				print(f"[DISCONNECTING]: {cde}")
+				break
+
+			except Exception:
+				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+				self.client_socket.close()
+				break
 
 
 	def start(self):
@@ -34,27 +69,25 @@ class Client:
 			try:
 				self.server_ip = input(F"Enter server's {connection_scope} IP: ").strip()
 				self.port = int(input("Enter port number.\n(DEFAULT: '5050' for local connection, '5001' for public connection): ").strip())
-				self.server_address = (self.server_ip, self.port)
 				break
+			
 			except ValueError:
 				print("[ERROR]: Port number must be an integer.")
 
 		try:
-			print("[CONNECTING]: Attempting to connect to Server...")
-			self.client_socket.connect(self.server_address)
-			print(self.client_socket.recv(2048).decode(FORMAT))
+			self.nickname = input("Choose a nickname: ")
+			print(f"[CONNECTING]: Attempting to connect to Server ({self.server_ip} - port {self.port})...")
+			self.client_socket.connect((self.server_ip, self.port))
 
-			while True:
-				message = input("Enter message: ").strip()
-				if message != "":
-					self.send_message(message)
-				if message == DISCONNECT_MESSAGE:
-					break
+			threading.Thread(target=self.receive).start()
+			threading.Thread(target=self.send).start()
+		
 		except ConnectionRefusedError:
 			print("[ERROR]: Connect failed, please check the server's IP and Port, then try again.")
-		except ConnectionResetError:
+			self.client_socket.close()
+		
+		except (ConnectionResetError, ConnectionAbortedError):
 			print("[ERROR]: Connection disrupted, possibly due to a forcibly closed session from the server side or network error.")
-		finally:
 			self.client_socket.close()
 
 

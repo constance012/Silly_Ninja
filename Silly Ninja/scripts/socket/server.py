@@ -1,66 +1,25 @@
-import socket
 import threading
+import socket
 import requests
 from datetime import datetime
-from threading import Thread
 
-
-HEADER = 64  # A fixed-length message header of 64 bytes.
 FORMAT = "utf-8"
-DISCONNECT_MESSAGE = "clt-disconnect"
+DISCONNECT_MESSAGE = "!leave"
 
 
-class ThreadedClientHandler(Thread):
-	def __init__(self, connection, address):
-		Thread.__init__(self)
-		self.connection = connection
-		self.address = address
-		self.start()
-
-		print(f"[CURRENT ACTIVE CONNECTIONS]: {threading.activeCount() - 1} connections.")
-
-
-	def message_from_server(self, message):
-		self.connection.send(f"SERVER: {message.encode(FORMAT)}")
-
-
-	def run(self):
-		now = datetime.now()
-		print(f"[NEW CONNECTION INBOUND - {now:%B %d, %Y - %H:%M:%S}]: {self.address} connected.")
-		self.message_from_server("----- Connected to Server -----")
-
-		connected = True
-		while connected:
-			msg_length = self.connection.recv(HEADER).decode(FORMAT)
-			
-			if msg_length:
-				msg_length = int(msg_length)
-				msg = self.connection.recv(msg_length).decode(FORMAT)
-				now = datetime.now()
-
-				if msg == DISCONNECT_MESSAGE:
-					print(f"[{self.address} - Client Disconnected At {now:%H:%M:%S}]")
-					self.message_from_server("----- Disconnected -----")
-					connected = False
-				else:
-					print(f"[{self.address} - At {now:%H:%M:%S}]: {msg}")
-					self.message_from_server("----- Message Received -----")
-
-		self.connection.close()
+class ClientDisconnectException(Exception):
+	pass
 
 
 class SocketServer:
 	def __init__(self):
-		# Get the address of a network interface used for internet access.
-		checker_sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		checker_sk.connect(("8.8.8.8", 80))
+		with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as checker_sk:
+			checker_sk.connect(("8.8.8.8", 80))
+			self.ip = checker_sk.getsockname()[0]  # Get the IP address.
 
 		self.port = 5050  # Internal port.
-		self.ip = checker_sk.getsockname()[0]  # Get the IP address.
-		self.address = (self.ip, self.port)
-		self.clients = set()
-
-		checker_sk.close()
+		self.clients = []
+		self.nicknames = []
 
 
 	def get_public_ip(self):
@@ -77,33 +36,58 @@ class SocketServer:
 
 	def broadcast(self, message):
 		for client in self.clients:
-			client.message_from_server(message)
+			client.send(message.encode(FORMAT))
+
+
+	# A method to handle each client, on each separated thread.
+	def handle(self, client, address):
+		while True:
+			try:
+				message = client.recv(1024).decode(FORMAT)
+				if message.split(": ", 1)[1] == DISCONNECT_MESSAGE:
+					raise ClientDisconnectException("Client disconnected.")
+				else:
+					self.broadcast(message)
+			except Exception:
+				index = self.clients.index(client)
+				client.send(DISCONNECT_MESSAGE.encode(FORMAT))
+				self.clients.remove(client)
+				client.close()
+				nickname = self.nicknames[index]
+				print(f"[LEAVING]: {address} a.k.a \"{nickname}\" has left the chat.")
+				self.broadcast(f"[LEAVING]: {nickname} has left the chat.")
+				self.nicknames.remove(nickname)
+				break
 
 
 	def start_server(self):
 		print("[GREETING]: Welcome to Socket with Python, stranger.")
+		print(f"[PUBLIC IP]: {self.get_public_ip()}")
 		print("[STARTING]: Server is starting...")
 
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-			server.bind(self.address)
-
-			# Start listening for new connections.
-			server.listen()
+			server.bind((self.ip, self.port))
 			print(f"[LISTENING]: Server is listening for connections on {self.ip} - port: {self.port}")
+			server.listen()
 
-			try:
-				while True:
-					connection, address = server.accept()
-					if connection != None:
-						self.clients.add(ThreadedClientHandler(connection, address))
+			while True:
+				client, address = server.accept()
+				now = datetime.now()
+				print(f"[NEW CONNECTION INBOUND - {now: %B %d, %Y - %H:%M:%S}]: {address} connected.")
 
-					message = input("Enter broadcast message: ").strip()
-					if message != "":
-						self.broadcast(message)
-			finally:
-				self.clients.clear()
+				# Send a keyword that asks the client to enter their nickname.
+				client.send("NICKNAME".encode(FORMAT))
+				nickname = client.recv(1024).decode(FORMAT)
+				self.nicknames.append(nickname)
+				self.clients.append(client)
+
+				print(f"[JOINING]: {address} joined the chat as {nickname}.")
+				self.broadcast(f"[JOINING]: {nickname} joined the chat!")
+				client.send((f"[CONNECTED]: Welcome to the Chat Room, {nickname}!\n" +
+							"[RECEIVING INPUT]: Now, you can enter messages and send them to other people.").encode(FORMAT))
+
+				threading.Thread(target=self.handle, args=(client, address)).start()
 
 
-server = SocketServer()
-print(server.get_public_ip())
-server.start_server()
+if __name__ == "__main__":
+	SocketServer().start_server()
