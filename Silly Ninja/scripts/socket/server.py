@@ -13,10 +13,8 @@ class ClientDisconnectException(Exception):
 
 class SocketServer:
 	def __init__(self):
-		with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as checker_sk:
-			checker_sk.connect(("8.8.8.8", 80))
-			self.ip = checker_sk.getsockname()[0]  # Get the IP address.
-
+		# Get the IP address of RadminVPN.
+		self.ip = socket.gethostbyname(socket.gethostname())
 		self.port = 5050  # Internal port.
 		self.clients = []
 		self.nicknames = []

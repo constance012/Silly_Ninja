@@ -2,6 +2,7 @@ import socket
 import threading
 import traceback
 import os
+import traceback
 from server import ClientDisconnectException
 
 FORMAT = "utf-8"
@@ -84,10 +85,12 @@ class Client:
 		
 		except ConnectionRefusedError:
 			print("[ERROR]: Connect failed, please check the server's IP and Port, then try again.")
+			print(traceback.format_exc())
 			self.client_socket.close()
 		
 		except (ConnectionResetError, ConnectionAbortedError):
 			print("[ERROR]: Connection disrupted, possibly due to a forcibly closed session from the server side or network error.")
+			print(traceback.format_exc())
 			self.client_socket.close()
 
 
