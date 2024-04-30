@@ -16,3 +16,14 @@ def load_images(path):
 		images.append(load_image(path + "/" + image_name))
 	
 	return images
+
+# Fading out effect.
+def fade_out(WINDOW_SIZE, draw_surface, color=(255, 255, 255)):
+	fade_out = pygame.Surface(WINDOW_SIZE)  # Input a tuple.
+	fade_out.fill(color)
+
+	for alpha in range(0, 256):  # Set opaque value.
+		fade_out.set_alpha(alpha)
+		draw_surface.blit(fade_out, (0, 0))
+		pygame.display.update()
+		pygame.time.delay(4)  # Each loop time has 4ms delay.

@@ -9,18 +9,15 @@ from scripts.entities import Player, Enemy
 from scripts.clouds import Clouds
 from scripts.visual_effects import Particle, Spark
 from scripts.animation import Animation
-from scripts.utils import load_image, load_images
+from scripts.utils import load_image, load_images, fade_out
 
 
 class Game:
-	def __init__(self):
-		pygame.init()
-		pygame.display.set_caption("Silly Ninja")
-
-		self.clock = pygame.time.Clock()
-		self.screen = pygame.display.set_mode((640, 480))
-		self.display = pygame.Surface((320, 240), pygame.SRCALPHA)  # Outline display
-		self.display_2 = pygame.Surface((320, 240))  # Normal display
+	def __init__(self, clock, screen, outline_display, normal_display):
+		self.clock = clock
+		self.screen = screen
+		self.display = outline_display  # Outline display
+		self.display_2 = normal_display  # Normal display
 
 		# Assets database for images, audio,...
 		# Values are lists for multiple images.
@@ -99,13 +96,10 @@ class Game:
 
 
 	def run(self):
-		pygame.mixer.music.load("assets/music.wav")
-		pygame.mixer.music.set_volume(0.6)
-		pygame.mixer.music.play(-1)
-
 		self.sounds["ambience"].play(-1)
 
-		while True:
+		running = True
+		while running:
 			self.display.fill((0, 0, 0, 0))
 			self.display_2.blit(self.assets["background"], (0, 0))
 
@@ -214,6 +208,9 @@ class Game:
 					pygame.quit()
 					sys.exit()
 				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_ESCAPE:
+						running = False
+						fade_out((self.display.get_width(), self.display.get_height()), self.display_2)
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
 						self.movement[0] = True
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -242,6 +239,3 @@ class Game:
 			
 			pygame.display.update()
 			self.clock.tick(60)
-
-
-Game().run()

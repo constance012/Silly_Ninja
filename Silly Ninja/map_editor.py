@@ -170,4 +170,6 @@ class MapEditor:
 			pygame.display.update()
 			self.clock.tick(60)
 
-MapEditor().run()
+
+if __name__ == '__main__':
+	MapEditor().run()
