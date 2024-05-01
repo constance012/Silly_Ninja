@@ -42,7 +42,7 @@ class Client:
 		while True:
 			try:
 				message = f"{self.nickname}: {input()}"
-				print("\033[1A" + "\033[K", end='')  # Clear the submitted input line.
+				print("\033[1A" + "\033[K", end='')  # Clear the submitted input line using ANSI escape characters.
 				self.client_socket.send(message.encode(FORMAT))
 
 				if message.split(": ", 1)[1] == DISCONNECT_MESSAGE:
