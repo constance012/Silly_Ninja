@@ -160,6 +160,8 @@ class InputField(UIBase):
 					self.display_text.text = self.placeholder_text
 
 		self.color = DODGER_BLUE_2 if self.active else DODGER_BLUE_4
+
+		# Resize the box if the text grows beyond the initial width.
 		self.rect.w = max(self.width, self.display_text.width + 20)
 
 
@@ -178,6 +180,14 @@ class InputField(UIBase):
 
 
 	def render(self, surface):
-		alpha = 100 if self.display_text.text == self.placeholder_text else 255
+		alpha = 80 if self.display_text.text == self.placeholder_text else 255
 		UIBase.draw_rect(self.rect, surface, self.x, self.y, color=self.color)
 		self.display_text.render(surface, alpha=alpha)
+
+
+	def get_submitted_text(self):
+		return self.display_text.text
+
+
+	def clear_text(self):
+		self.display_text.text = self.placeholder_text

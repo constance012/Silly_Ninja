@@ -12,10 +12,10 @@ class ClientDisconnectException(Exception):
 
 
 class SocketServer:
-	def __init__(self):
+	def __init__(self, ip, port):
 		# Get the IP address of RadminVPN.
-		self.ip = socket.gethostbyname(socket.gethostname())
-		self.port = 5050  # Internal port.
+		self.ip = ip
+		self.port = port  # Internal port.
 		self.clients = []
 		self.nicknames = []
 
@@ -60,7 +60,7 @@ class SocketServer:
 
 	def start_server(self):
 		print("[GREETING]: Welcome to Socket with Python, stranger.")
-		print(f"[PUBLIC IP]: {self.get_public_ip()}")
+		# print(f"[PUBLIC IP]: {self.get_public_ip()}")
 		print("[STARTING]: Server is starting...")
 
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -88,4 +88,6 @@ class SocketServer:
 
 
 if __name__ == "__main__":
-	SocketServer().start_server()
+	ip = socket.gethostbyname(socket.gethostname())
+	port = 5050
+	SocketServer(ip, port).start_server()
