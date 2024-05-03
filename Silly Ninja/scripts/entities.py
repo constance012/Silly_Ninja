@@ -11,9 +11,10 @@ class PhysicsEntity:
 		self.pos = list(pos)
 		self.size = size
 		self.velocity = [0, 0]
-		self.last_movement = [0, 0]
+		self.last_movement = (0, 0)
 		self.collisions = {"up": False, "down": False, "left": False, "right": False}
 
+		self.animation = None
 		self.action = ""
 		self.anim_offset = (-3, -3)
 		self.facing_left = False
@@ -36,7 +37,7 @@ class PhysicsEntity:
 
 		# Handle collision for the X axis.
 		self.pos[0] += frame_movement[0]
-		entity_rect = self.rect()	
+		entity_rect = self.rect()
 		for rect in tilemap.physics_neighbor_rects(self.pos):
 			if entity_rect.colliderect(rect):
 				# Moving to the right and collide with something.
@@ -120,6 +121,7 @@ class Enemy(PhysicsEntity):
 						for i in range(4):
 							self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5, random.random() + 2))
 		
+		# Randomize movement.
 		elif random.random() < 0.01:
 			self.walking = random.randint(30, 120)
 			if random.randint(1, 5) == 1:
@@ -133,7 +135,7 @@ class Enemy(PhysicsEntity):
 		else:
 			self.set_action("idle")
 
-		# Dies if takes damage from the player.
+		# Dies if takes damage from the player's dash.
 		if abs(self.game.player.dashing) >= 50:
 			if self.rect().colliderect(self.game.player.rect()):
 				self.game.screenshake = max(self.game.screenshake, 16)
@@ -192,11 +194,14 @@ class Player(PhysicsEntity):
 				angle = random.random() * math.pi * 2
 				speed = random.random() * 0.5 + 0.5
 				p_velocity = [math.cos(angle) * speed, math.sin(angle) * speed]
-				self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=p_velocity, start_frame=random.randint(0, 7)))	
-		if self.dashing > 0:
+				self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=p_velocity, start_frame=random.randint(0, 7)))
+		
+		if self.dashing > 0:  # Dash to the right.
 			self.dashing = max(self.dashing - 1, 0)
-		else:
-			self.dashing = min(self.dashing + 1, 0)	
+		else:  # Dash to the left.
+			self.dashing = min(self.dashing + 1, 0)
+		
+		# Generate trail particles.
 		if abs(self.dashing) > 50:
 			# Get the dash direction and multiply it with an amplitude.
 			self.velocity[0] = abs(self.dashing) / self.dashing * 8
@@ -249,7 +254,7 @@ class Player(PhysicsEntity):
 				return True
 			elif not self.facing_left and self.last_movement[0] > 0:
 				self.velocity[0] = -2.5
-				self.velocity[1] = -2.5	
+				self.velocity[1] = -2.5
 				self.air_time = 5
 				self.jumps = max(self.jumps - 1, 0)
 				return True

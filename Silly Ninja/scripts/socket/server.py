@@ -1,10 +1,12 @@
 import threading
 import socket
 import requests
+import time
 from datetime import datetime
 
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "!leave"
+MAX_CLIENT_COUNT = 4
 
 
 class ClientDisconnectException(Exception):
@@ -16,6 +18,7 @@ class SocketServer:
 		# Get the IP address of RadminVPN.
 		self.ip = ip
 		self.port = port  # Internal port.
+
 		self.clients = []
 		self.nicknames = []
 
@@ -71,20 +74,28 @@ class SocketServer:
 			while True:
 				client, address = server.accept()
 				now = datetime.now()
-				print(f"[NEW CONNECTION INBOUND - {now: %B %d, %Y - %H:%M:%S}]: {address} connected.")
 
-				# Send a keyword that asks the client to enter their nickname.
-				client.send("NICKNAME".encode(FORMAT))
-				nickname = client.recv(1024).decode(FORMAT)
-				self.nicknames.append(nickname)
-				self.clients.append(client)
+				if len(self.clients) < MAX_CLIENT_COUNT:
+					print(f"[NEW CONNECTION INBOUND - {now: %B %d, %Y - %H:%M:%S}]: {address} connected.")
 
-				print(f"[JOINING]: {address} joined the chat as {nickname}.")
-				self.broadcast(f"[JOINING]: {nickname} joined the chat!")
-				client.send((f"[CONNECTED]: Welcome to the Chat Room, {nickname}!\n" +
-							"[RECEIVING INPUT]: Now, you can enter messages and send them to other people.").encode(FORMAT))
+					# Send a keyword that asks the client to enter their nickname.
+					client.send("NICKNAME".encode(FORMAT))
+					nickname = client.recv(1024).decode(FORMAT)
+					self.nicknames.append(nickname)
+					self.clients.append(client)
 
-				threading.Thread(target=self.handle, args=(client, address)).start()
+					print(f"[JOINING]: {address} joined the chat as {nickname}.")
+					self.broadcast(f"[JOINING]: {nickname} joined the chat!")
+					client.send((f"[CONNECTED]: Welcome to the Chat Room, {nickname}!\n" +
+								"[RECEIVING INPUT]: Now, you can enter messages and send them to other people.").encode(FORMAT))
+
+					threading.Thread(target=self.handle, args=(client, address)).start()
+				else:
+					client.send(("[JOIN FAILED]: Connected successfully but the maximum number of clients has been reached. " +
+								"Hence CAN NOT join the game.").encode(FORMAT))
+					time.sleep(1)
+					client.send(DISCONNECT_MESSAGE.encode(FORMAT))
+					client.close()
 
 
 if __name__ == "__main__":
