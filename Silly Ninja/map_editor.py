@@ -1,20 +1,124 @@
 import pygame
 import sys
+import os
+import json
+import time
 
 from scripts.tilemap import Tilemap, Tile
-from scripts.utils import load_images
+from scripts.utils import load_images, fade_out
+from scripts.ui.sub_menus import MenuBase
+from scripts.ui.ui_elements import Button, BorderedText, Text, InputField
+
 
 RENDER_SCALE = 2.0
-MAP_ID = "1"
+MAP_ID = 0
+MAP_PATH = f"assets/maps/{MAP_ID}.json"
 
-class MapEditor:
+WIDTH, HEIGHT = 640, 480
+CENTER = WIDTH / 2
+
+
+class EditorMenu(MenuBase):
 	def __init__(self):
-		pygame.init()
+		super().__init__()
 		pygame.display.set_caption("Map Editor")
 
-		self.clock = pygame.time.Clock()
-		self.screen = pygame.display.set_mode((640, 480))
-		self.display = pygame.Surface((320, 240))
+		self.editor = MapEditor(MenuBase.clock, MenuBase.screen, MenuBase.normal_display)
+
+		# UI Elements.
+		self.title = BorderedText("MAP EDITOR", "retro gaming", (CENTER, 30), size=70, bold=True)
+		self.sub_title = Text("----- For Silly Ninja -----", "retro computer", (CENTER, 130), size=15)
+
+		self.error_text = Text("", "retro gaming", (CENTER, 170), size=13, color=pygame.Color("crimson"))
+		self.map_id_field = InputField("gamer", (CENTER, 210), (400, 50), placeholder_text="Enter Map ID...")
+
+		self.delete_button = Button("Delete", "gamer", (220, 310), (150, 60), on_click=self.delete_map)
+		self.edit_button = Button("Edit", "gamer", (420, 310), (150, 60), on_click=self.edit_map)
+		self.quit_button = Button("Quit", "gamer", (CENTER, 390), (150, 60), on_click=self.terminate)
+
+
+	def run(self):
+		while self.running:
+			MenuBase.screen.blit(self.background, (0, 0))
+
+			mx, my = pygame.mouse.get_pos()
+
+			# Render titles.
+			self.title.render(MenuBase.screen)
+			self.sub_title.render(MenuBase.screen)
+
+			# Render the map id field.
+			self.error_text.render(MenuBase.screen)
+			self.map_id_field.update(mx, my, self.click)
+			self.map_id_field.render(MenuBase.screen)
+
+			# Render the delete button.
+			self.fade_alpha = self.delete_button.update(MenuBase.screen, self.fade_alpha, mx, my, self.click)
+			self.delete_button.render(MenuBase.screen)
+
+			# Render the edit button.
+			self.fade_alpha = self.edit_button.update(MenuBase.screen, self.fade_alpha, mx, my, self.click)
+			self.edit_button.render(MenuBase.screen)
+
+			# Render the quit button.
+			self.fade_alpha = self.quit_button.update(MenuBase.screen, self.fade_alpha, mx, my, self.click)
+			self.quit_button.render(MenuBase.screen)
+
+			self.handle_fade_in(MenuBase.screen)
+
+			self.click = False
+			for event in pygame.event.get():
+				self.handle_events(event)
+
+			pygame.display.update()
+			MenuBase.clock.tick(60)
+
+
+	def edit_map(self):
+		try:
+			global MAP_ID, MAP_PATH
+			MAP_ID = int(self.map_id_field.get_submitted_text())
+			MAP_PATH = f"assets/maps/{MAP_ID}.json"
+			
+			self.editor.load(MAP_ID, self.error_text)
+			self.editor.run()
+			self.error_text.text = ""
+		
+		except ValueError:
+			self.error_text.text = "Map ID must be an Integer"
+		except Exception as e:
+			self.error_text.text = str(e)
+
+
+	def delete_map(self):
+		try:
+			global MAP_ID, MAP_PATH
+			MAP_ID = int(self.map_id_field.get_submitted_text())
+			MAP_PATH = f"assets/maps/{MAP_ID}.json"
+			
+			if os.path.exists(MAP_PATH):
+				os.remove(MAP_PATH)
+				self.error_text.text = f"DELETED map at \"{MAP_PATH}\"."
+			else:
+				self.error_text.text = f"Map with ID {MAP_ID} doesn't exist."
+		
+		except ValueError:
+			self.error_text.text = "Map ID must be an Integer."
+		except Exception as e:
+			self.error_text.text = str(e)
+
+
+	def handle_events(self, event):
+		super().handle_events(event)
+		if event.type == pygame.KEYDOWN:
+			self.map_id_field.handle_key_pressed(event)
+
+
+class MapEditor:
+	def __init__(self, clock, screen, display):
+		self.clock = clock
+		self.screen = screen
+		self.display = display
 
 		# Assets database for tile groups. Values are lists.
 		self.assets = {
@@ -30,10 +134,6 @@ class MapEditor:
 		self.tile_group = 0  # Grass, Decor, Stone,...
 		self.tile_variant = 0
 
-		try:
-			self.tilemap.load(f"assets/maps/{MAP_ID}.json")
-		except FileNotFoundError:
-			print("LOAD FAILED! Map file was not found.")
 
 		self.movement = [False, False, False, False]
 		self.camera_scroll = [0, 0]
@@ -46,8 +146,30 @@ class MapEditor:
 		self.on_grid = True
 
 
+	def load(self, id, error_text):
+		try:
+			self.tilemap.load(MAP_PATH)
+		except FileNotFoundError:
+			error_text.text = "LOAD FAILED! Map file was not found. Creating an empty map file..."
+			time.sleep(2)
+			self.create_empty_map(id)
+
+
+	def create_empty_map(self, id):
+		f = open(MAP_PATH, 'x')
+		out = {
+			"tilemap": {},
+			"tile_size": 16,
+			"offgrid_tiles": []
+		}
+		json.dump(out, f, indent=4)
+		f.close()
+		print(f"Map CREATED at: {MAP_PATH}")
+	
+
 	def run(self):
-		while True:
+		running = True
+		while running:
 			self.display.fill((150, 150, 150))
 
 			self.camera_scroll[0] += (self.movement[1] - self.movement[0]) * 2
@@ -133,6 +255,9 @@ class MapEditor:
 						self.right_clicking = False
 
 				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_ESCAPE:
+						running = False
+						fade_out((self.display.get_width(), self.display.get_height()), self.display)
 					if event.key == pygame.K_a:
 						self.movement[0] = True
 					if event.key == pygame.K_d:
@@ -141,6 +266,7 @@ class MapEditor:
 						self.movement[2] = True
 					if event.key == pygame.K_s:
 						self.movement[3] = True
+						print(MAP_ID)
 						if self.left_control:
 							self.tilemap.save(f"assets/maps/{MAP_ID}.json")
 					if self.left_control and event.key == pygame.K_r:
@@ -172,4 +298,4 @@ class MapEditor:
 
 
 if __name__ == '__main__':
-	MapEditor().run()
+	EditorMenu().run()
