@@ -1,5 +1,6 @@
 import pygame
 import os
+import threading
 
 BASE_IMAGE_PATH = "assets/images/"
 
@@ -17,6 +18,7 @@ def load_images(path):
 	
 	return images
 
+
 # Fading out effect.
 def fade_out(WINDOW_SIZE, draw_surface, color=(255, 255, 255)):
 	fade_out = pygame.Surface(WINDOW_SIZE)  # Input a tuple.
@@ -27,3 +29,16 @@ def fade_out(WINDOW_SIZE, draw_surface, color=(255, 255, 255)):
 		draw_surface.blit(fade_out, (0, 0))
 		pygame.display.update()
 		pygame.time.delay(4)  # Each loop time has 4ms delay.
+
+
+def show_running_threads():
+	for thread in threading.enumerate():
+		print(thread.name)
+
+
+if __name__ == '__main__':
+	a = [1, 2]
+	print(a)
+	del a
+	a = [3, 4]
+	print(a)

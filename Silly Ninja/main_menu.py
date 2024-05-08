@@ -1,6 +1,6 @@
 import pygame
 
-from game import Game
+from scripts.game import GameSolo
 from scripts.ui.ui_elements import Button, Text, BorderedText
 from scripts.ui.sub_menus import MenuBase, HostMenu, JoinMenu
 
@@ -18,18 +18,20 @@ class MainMenu(MenuBase):
 		pygame.display.set_caption("Silly Ninja")
 
 		# Game and sub menus.
-		self.game = Game(MenuBase.clock, MenuBase.screen, MenuBase.outline_display, MenuBase.normal_display)
+		self.game_solo = GameSolo(MenuBase.clock, MenuBase.screen, MenuBase.outline_display, MenuBase.normal_display)
+
 		self.host_menu = HostMenu()
 		self.join_menu = JoinMenu()
+		#self.lobby = Lobby(None, None)
 
 		# UI Elements.
 		self.title = BorderedText("SILLY NINJA", "retro gaming", (CENTER, 30), size=70, bold=True)
 		self.version_text = Text("----- Beta v0.9 -----", "retro computer", (CENTER, 130), size=15)
 
-		self.solo_button = Button("Solo", "gamer", (CENTER, 180), (150, 60), on_click=self.game.run)
+		self.solo_button = Button("Solo", "gamer", (CENTER, 180), (150, 60), on_click=self.game_solo.run)
 		self.join_button = Button("Join", "gamer", (CENTER, 250), (150, 60), on_click=self.join_menu.run)
 		self.host_button = Button("Host", "gamer", (CENTER, 320), (150, 60), on_click=self.host_menu.run)
-		self.quit_button = Button("Quit", "gamer", (CENTER, 390), (150, 60), on_click=self.terminate)
+		self.quit_button = Button("Quit", "gamer", (CENTER, 390), (150, 60), on_click=self.terminate, fade_out=False)
 
 
 	def run(self):

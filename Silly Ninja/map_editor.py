@@ -82,12 +82,12 @@ class EditorMenu(MenuBase):
 			
 			self.editor.load(MAP_ID, self.error_text)
 			self.editor.run()
-			self.error_text.text = ""
+			self.error_text.set_text("")
 		
 		except ValueError:
-			self.error_text.text = "Map ID must be an Integer"
+			self.error_text.set_text("Map ID must be an Integer")
 		except Exception as e:
-			self.error_text.text = str(e)
+			self.error_text.set_text(str(e))
 
 
 	def delete_map(self):
@@ -98,14 +98,14 @@ class EditorMenu(MenuBase):
 			
 			if os.path.exists(MAP_PATH):
 				os.remove(MAP_PATH)
-				self.error_text.text = f"DELETED map at \"{MAP_PATH}\"."
+				self.error_text.set_text(f"DELETED map at \"{MAP_PATH}\".")
 			else:
-				self.error_text.text = f"Map with ID {MAP_ID} doesn't exist."
+				self.error_text.set_text(f"Map with ID {MAP_ID} doesn't exist.")
 		
 		except ValueError:
-			self.error_text.text = "Map ID must be an Integer."
+			self.error_text.set_text("Map ID must be an Integer.")
 		except Exception as e:
-			self.error_text.text = str(e)
+			self.error_text.set_text(str(e))
 
 
 	def handle_events(self, event):
@@ -140,8 +140,8 @@ class MapEditor:
 
 		self.left_clicking = False
 		self.right_clicking = False
-		self.left_shift = False
-		self.left_control = False
+		self.shift_held = False
+		self.control_held = False
 
 		self.on_grid = True
 
@@ -150,7 +150,7 @@ class MapEditor:
 		try:
 			self.tilemap.load(MAP_PATH)
 		except FileNotFoundError:
-			error_text.text = "LOAD FAILED! Map file was not found. Creating an empty map file..."
+			error_text.set_text("LOAD FAILED! Map file was not found. Creating an empty map file...")
 			time.sleep(2)
 			self.create_empty_map(id)
 
@@ -225,7 +225,6 @@ class MapEditor:
 				if event.type == pygame.MOUSEBUTTONDOWN:
 					if event.button == 1:
 						self.left_clicking = True
-
 						# Handle placing offgrid tiles.
 						if not self.on_grid:
 							offgrid_tile = Tile(self.tile_list[self.tile_group], self.tile_variant,
@@ -233,7 +232,7 @@ class MapEditor:
 							self.tilemap.offgrid_tiles.append(offgrid_tile)
 					if event.button == 3:
 						self.right_clicking = True
-					if self.left_shift:
+					if self.shift_held:
 						# Scroll the mouse wheel up.
 						if event.button == 4:
 							self.tile_variant = (self.tile_variant - 1) % len(current_tile_group)
@@ -267,16 +266,16 @@ class MapEditor:
 					if event.key == pygame.K_s:
 						self.movement[3] = True
 						print(MAP_ID)
-						if self.left_control:
+						if self.control_held:
 							self.tilemap.save(f"assets/maps/{MAP_ID}.json")
-					if self.left_control and event.key == pygame.K_r:
+					if self.control_held and event.key == pygame.K_r:
 						self.tilemap.ruletile()
 					if event.key == pygame.K_g:
 						self.on_grid = not self.on_grid
-					if event.key == pygame.K_LSHIFT:
-						self.left_shift = True
-					if event.key == pygame.K_LCTRL:
-						self.left_control = True
+					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
+						self.shift_held = True
+					if event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
+						self.control_held = True
 
 				if event.type == pygame.KEYUP:
 					if event.key == pygame.K_a:
@@ -287,10 +286,10 @@ class MapEditor:
 						self.movement[2] = False
 					if event.key == pygame.K_s:
 						self.movement[3] = False
-					if event.key == pygame.K_LSHIFT:
-						self.left_shift = False
-					if event.key == pygame.K_LCTRL:
-						self.left_control = False
+					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
+						self.shift_held = False
+					if event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
+						self.control_held = False
 
 			self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
 			pygame.display.update()

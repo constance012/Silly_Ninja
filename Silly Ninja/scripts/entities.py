@@ -3,9 +3,12 @@ import random
 import pygame
 
 from scripts.visual_effects import Particle, Projectile, Spark
+from scripts.ui.ui_elements import Text
 
 class PhysicsEntity:
-	def __init__(self, game, entity_type, pos, size):
+	def __init__(self, game, entity_type, pos, size, id="", client_id="solo"):
+		self.id = id
+		self.client_id = client_id
 		self.game = game
 		self.type = entity_type
 		self.pos = list(pos)
@@ -18,7 +21,6 @@ class PhysicsEntity:
 		self.action = ""
 		self.anim_offset = (-3, -3)
 		self.facing_left = False
-		self.set_action("idle")
 
 
 	def rect(self):
@@ -26,9 +28,9 @@ class PhysicsEntity:
 
 
 	def set_action(self, action):
-		if action != self.action:
+		if self.action != action:
 			self.action = action
-			self.animation = self.game.assets["{0}/{1}".format(self.type, self.action)].copy()
+			self.animation = self.game.assets[f"{self.type}/{self.action}"].copy()
 
 
 	def update(self, tilemap, movement=(0, 0)):
@@ -86,13 +88,15 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-	def __init__(self, game, pos, size):
-		super().__init__(game, "enemy", pos, size)
-
+	def __init__(self, game, pos, size, id="", client_id="solo"):
+		super().__init__(game, "enemy", pos, size, id=id, client_id=client_id)
 		self.walking = 0
+		self.is_death = False
+		self.set_action("idle")
 
 
-	def update(self, tilemap, movement=(0, 0)):
+	def update(self, tilemap, movement=(0, 0), walking=0, facing_left=False):
+		# Continue previous movement, if doesn't finish yet.
 		if self.walking:
 			# Check for flipping against ground and wall tiles in front of the moving direction.
 			if tilemap.solid_check((self.rect().centerx + (-7 if self.facing_left else 7), self.pos[1] + 23)):
@@ -106,7 +110,7 @@ class Enemy(PhysicsEntity):
 			# Fires projectiles at the player.
 			self.walking = max(self.walking - 1, 0)
 			if not self.walking:
-				dist = (self.game.player.pos[0] - self.pos[0], self.game.player.pos[1] - self.pos[1])
+				dist = (self.game.get_main_player().pos[0] - self.pos[0], self.game.get_main_player().pos[1] - self.pos[1])
 				if abs(dist[1]) < 16:
 					if self.facing_left and dist[0] < 0:
 						bullet = Projectile(self.game, (self.rect().centerx - 7, self.rect().centery), -1.5, alive_time=0)
@@ -121,11 +125,15 @@ class Enemy(PhysicsEntity):
 						for i in range(4):
 							self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5, random.random() + 2))
 		
-		# Randomize movement.
-		elif random.random() < 0.01:
+		# Randomize movement, only for the solo and host clients.
+		elif random.random() < 0.01 and "client" not in self.client_id:
 			self.walking = random.randint(30, 120)
 			if random.randint(1, 5) == 1:
 				self.facing_left = not self.facing_left
+		# Otherwise, assign movement based on the host.
+		else:
+			self.walking = walking
+			self.facing_left = facing_left
 
 		super().update(tilemap, movement=movement)
 
@@ -136,8 +144,8 @@ class Enemy(PhysicsEntity):
 			self.set_action("idle")
 
 		# Dies if takes damage from the player's dash.
-		if abs(self.game.player.dashing) >= 50:
-			if self.rect().colliderect(self.game.player.rect()):
+		if abs(self.game.get_main_player().dashing) >= 50:
+			if self.rect().colliderect(self.game.get_main_player().rect()):
 				self.game.screenshake = max(self.game.screenshake, 16)
 				self.game.sounds["hit"].play()
 				for i in range(20, 31):
@@ -149,7 +157,9 @@ class Enemy(PhysicsEntity):
 					self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
 				self.game.sparks.append(Spark(self.rect().center, 0, random.random() + 5))
 				self.game.sparks.append(Spark(self.rect().center, math.pi, random.random() + 5))
-				return True
+				self.is_death = True
+
+		return self.is_death
 
 
 	def render(self, surface, offset=(0, 0)):
@@ -166,16 +176,49 @@ class Enemy(PhysicsEntity):
 
 
 class Player(PhysicsEntity):
-	def __init__(self, game, pos, size):
-		super().__init__(game, "player", pos, size)
+	def __init__(self, player_name, game, pos, size, id="", client_id="solo"):
+		super().__init__(game, "player", pos, size, id=id, client_id=client_id)
 		self.air_time = 0
 		self.jumps = 1
 		self.dashing = 0
 		self.wall_slide = False
 
+		self.player_name = player_name
+		self.name_text = Text(self.player_name, "gamer", self.pos, size=10, color=(255, 255, 255))
+		self.text_offset = (4, -12)
+		self.initialized = False
+
+		if self.client_id == "solo":
+			self.set_action("idle")
+
+
+	def __repr__(self):
+		return f"Player: [ID={self.id}, Client_ID={self.client_id}, Nickname={self.player_name}, Initialized={self.initialized}]"
+
+
+	def initialize_client(self, nickname, client_id, player_id, re_initialized=False):
+		if not self.initialized or re_initialized:
+			self.player_name = nickname
+			self.client_id = client_id
+			self.id = player_id
+			self.initialized = True
+			self.set_action("idle")
+
+
+	def unregister_client(self, client_index):
+		self.player_name = f"player_{client_index + 1}"
+		self.client_id = ""
+		self.initialized = False
+
+
+	def render_name_tag(self, surface, offset=(0, 0)):
+		self.name_text.render(surface, offset=offset)
+
 
 	def update(self, tilemap, movement=(0, 0)):
 		super().update(tilemap, movement=movement)
+
+		self.name_text.update_pos((self.pos[0] + self.text_offset[0], self.pos[1] + self.text_offset[1]))
 
 		# Handle air time and reset when grounded.
 		self.air_time += 1
@@ -189,7 +232,7 @@ class Player(PhysicsEntity):
 
 		# Handle dashing.
 		if abs(self.dashing) in {60, 50}:
-			# A burst of particles at the beginning and end of d dash.
+			# A burst of particles at the beginning and end of a dash.
 			for i in range(20):
 				angle = random.random() * math.pi * 2
 				speed = random.random() * 0.5 + 0.5
@@ -239,9 +282,9 @@ class Player(PhysicsEntity):
 			self.set_action("idle")
 
 
-	def render(self, surface, offset=(0, 0)):
+	def render(self, outline_surface, offset=(0, 0)):
 		if abs(self.dashing) <= 50:
-			super().render(surface, offset=offset)
+			super().render(outline_surface, offset=offset)
 
 
 	def jump(self):
