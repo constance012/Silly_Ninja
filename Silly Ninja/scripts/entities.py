@@ -193,7 +193,7 @@ class Player(PhysicsEntity):
 
 
 	def __repr__(self):
-		return f"Player: [ID={self.id}, Client_ID={self.client_id}, Nickname={self.player_name}, Initialized={self.initialized}]"
+		return f"Player: [ID={self.id:<12}, Client_ID={self.client_id:<9}, Nickname={self.player_name:<20}, Initialized={self.initialized!s:<5}]"
 
 
 	def initialize_client(self, nickname, client_id, player_id, re_initialized=False):
@@ -206,7 +206,8 @@ class Player(PhysicsEntity):
 
 
 	def unregister_client(self, client_index):
-		self.player_name = f"player_{client_index + 1}"
+		self.player_name = f"unnamed_player_{client_index + 1}"
+		self.id = f"player_{client_index + 1}"
 		self.client_id = ""
 		self.initialized = False
 

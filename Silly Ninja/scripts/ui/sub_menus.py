@@ -159,8 +159,8 @@ class HostMenu(MenuBase):
 		port = self.port_field.get_submitted_text()
 		nickname = self.nickname_field.get_submitted_text()
 
-		if nickname == "":
-			self.status_text.set_text("[ERROR]: Nickname can not be blank.")
+		if len(nickname) < 3:
+			self.status_text.set_text("[ERROR]: Nickname is shorter than 3 characters.")
 
 		elif re.match(IP_REGEX, ip) and re.match(PORT_REGEX, port):
 			self.status_text.set_text("")
@@ -169,25 +169,25 @@ class HostMenu(MenuBase):
 				self.server = GameServer(ip, port)
 				self.game.initialize(self.server, ip, int(port), nickname)
 
-				threading.Thread(target=self.game.start_server, args=(self.status_text,)).start()
-
-				self.back_button.interactable = False
-				self.start_button.interactable = False
+				threading.Thread(target=self.game.start_server, args=(self.status_text, self.set_buttons_interactable)).start()
 
 			except Exception:
-				self.status_text.set_text("[FAILED]: IP or port was invalid! Try again.")
+				self.status_text.set_text("[FAILED]: Server not found or IP was incorrect! Try again.")
 		else:
-			self.status_text.set_text("[ERROR] Incorrect IPv4 format or Port was not a number, or is less than 1000")
+			self.status_text.set_text("[FORMAT ERROR] IPv4 or Port was invalid (less than 1000)!")
 
 
 	def enter_lobby(self):
 		self.status_text.set_text("")
-		self.back_button.interactable = True
-		self.start_button.interactable = True
-		
 		del self.lobby
 		self.lobby = Lobby(self.game, server=self.server, is_host=True)
 		self.lobby.run()
+
+
+	def set_buttons_interactable(self, state):
+		if self.back_button.interactable != state:
+			self.back_button.interactable = bool(state)
+			self.start_button.interactable = bool(state)
 
 
 	def handle_events(self, event):
@@ -289,8 +289,8 @@ class JoinMenu(MenuBase):
 		port = self.port_field.get_submitted_text()
 		nickname = self.nickname_field.get_submitted_text()
 
-		if nickname == "":
-			self.status_text.set_text("[ERROR]: Nickname can not be blank.")
+		if len(nickname) < 3:
+			self.status_text.set_text("[ERROR]: Nickname is shorter than 3 characters.")
 
 		elif re.match(IP_REGEX, ip) and re.match(PORT_REGEX, port):
 			self.status_text.set_text("")
@@ -298,25 +298,25 @@ class JoinMenu(MenuBase):
 				print(ip, int(port), nickname)
 				self.game.initialize(ip, int(port), nickname)
 				
-				threading.Thread(target=self.game.join_lobby, args=(self.status_text,)).start()
-
-				self.back_button.interactable = False
-				self.join_button.interactable = False
+				threading.Thread(target=self.game.join_lobby, args=(self.status_text, self.set_buttons_interactable)).start()
 
 			except Exception:
-				self.status_text.set_text("[FAILED]: IP or port was invalid! Try again.")
+				self.status_text.set_text("[FAILED]: Server not found or IP was incorrect! Try again.")
 		else:
-			self.status_text.set_text("[ERROR]: Incorrect IPv4 format or Port was not a number, or is less than 1000")
+			self.status_text.set_text("[FORMAT ERROR]: IPv4 or Port was invalid (less than 1000)!")
 
 
 	def enter_lobby(self):
 		self.status_text.set_text("")
-		self.back_button.interactable = True
-		self.join_button.interactable = True
-
 		del self.lobby
 		self.lobby = Lobby(self.game, server=None, is_host=False)
 		self.lobby.run()
+
+
+	def set_buttons_interactable(self, state):
+		if self.back_button.interactable != state:
+			self.back_button.interactable = bool(state)
+			self.join_button.interactable = bool(state)
 
 
 	def handle_events(self, event):
@@ -383,6 +383,8 @@ class Lobby(MenuBase):
 		print("Lobby running...")
 
 		while self.running:
+			self.running = self.game_instance.connected
+
 			MenuBase.screen.blit(self.background, (0, 0))
 
 			mx, my = pygame.mouse.get_pos()
@@ -427,14 +429,14 @@ class Lobby(MenuBase):
 		for i in range(MAX_CLIENT_COUNT):
 			player = self.game_players[i]
 			# Update player slots when new players joined.
-			if player.initialized and self.borders[i].color == AZURE4:
+			if player.initialized and self.player_names[i].text != player.player_name:
 				self.borders[i].color = FOREST_GREEN
 				self.player_names[i].set_text(player.player_name)
 				self.player_names[i].color = DARK_GOLDEN_ROD if player.id == "main_player" else DARK_SLATE_GRAY
 				self.player_status[i].set_text("--- Host ---" if player.client_id == "host" else "--- Connected ---")
 				self.connected_players += 1
 			# Or reset slots when players left.
-			elif not player.initialized and self.borders[i].color == FOREST_GREEN:
+			elif not player.initialized and self.player_names[i].text != "EMPTY SLOT":
 				self.borders[i].color = AZURE4
 				self.player_names[i].set_text("EMPTY SLOT")
 				self.player_names[i].color = DARK_SLATE_GRAY

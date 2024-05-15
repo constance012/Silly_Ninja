@@ -161,8 +161,7 @@ class GameClient(ChatClient):
 						self.client_index = index
 						self.client_id = player_infos[1]
 					# [int(index), str(client_id), list(nicknames), list(client_ids)]
-					self.game.on_connection_made(index, player_infos[2].split(","),
-														player_infos[3].split(","))
+					self.game.on_connection_made(index, player_infos[2].split(","), player_infos[3].split(","))
 					
 				elif "PLAYER LEFT" in message:
 					player_index = int(message.split(":")[1])
@@ -174,8 +173,7 @@ class GameClient(ChatClient):
 					index = int(infos[0])
 					self.client_index = index
 					self.client_id = infos[1]
-					self.game.on_connection_made(index, player_infos[2].split(","),
-														player_infos[3].split(","), re_initialized=True)
+					self.game.on_connection_made(index, infos[2].split(","), infos[3].split(","), re_initialized=True)
 				
 				elif self.game_started:
 					message_segments = message.split(";")
@@ -198,11 +196,15 @@ class GameClient(ChatClient):
 				self.clock.tick(self.fps)
 		
 			except ClientDisconnectException:
-				self.disconnect()
+				if self.client_id == "host":
+					self.disconnect()
+				else:
+					self.game.disconnect_from_server()
 			
 			except Exception:
-				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
-				self.disconnect()
+				if self.running:
+					print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+					self.disconnect()
 
 
 	def send(self):
@@ -229,8 +231,9 @@ class GameClient(ChatClient):
 				self.clock.tick(self.fps)
 
 			except Exception:
-				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
-				self.disconnect()
+				if self.running:
+					print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+					self.disconnect()
 
 
 	def connect(self):

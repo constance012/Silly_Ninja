@@ -12,7 +12,7 @@ from scripts.clouds import Clouds
 from scripts.visual_effects import Particle, Spark
 from scripts.animation import Animation
 from scripts.utils import load_image, load_images, fade_out
-from scripts.socket.client import GameClient
+from scripts.socket.client import GameClient, MAX_CLIENT_COUNT
 
 
 class GameBase:
@@ -185,9 +185,9 @@ class GameForHost(GameBase):
 		self.get_main_player().pos = self.spawn_pos
 
 
-	def start_server(self, status_text):
-		#show_running_threads()
+	def start_server(self, status_text, set_buttons_interactable):
 		status_text.set_text("[STARTING]: Initializing LAN server...")
+		set_buttons_interactable(False)
 		threading.Thread(target=self.server.start_server).start()
 		time.sleep(5)
 		
@@ -205,10 +205,16 @@ class GameForHost(GameBase):
 		else:
 			status_text.set_text("[TIMED OUT]: Server failed to start, check IP and port.")
 
+		set_buttons_interactable(True)
+
 
 	def shutdown_server(self):
 		self.connected = False
+		for i in range(MAX_CLIENT_COUNT):
+			self.entities[i].unregister_client(i)
 		self.server.shutdown()
+		del self.entities
+		del self.client
 
 
 	def launch_session(self, status_text):
@@ -224,19 +230,21 @@ class GameForHost(GameBase):
 		if not self.connected or re_initialized:
 			self.player_index = player_index
 			
-			for i in range(self.player_index + 1):
+			for i in range(MAX_CLIENT_COUNT):
 				if i == self.player_index:
 					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
 											player_id="main_player", re_initialized=re_initialized)
-				else:
+				elif i < len(nicknames):
 					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
 											player_id=f"player_{i + 1}", re_initialized=re_initialized)
+				else:
+					self.entities[i].unregister_client(i)
 			self.connected = True
 		else:
 			self.entities[player_index].initialize_client(nicknames[player_index],
 										client_id=client_ids[player_index], player_id=f"player_{player_index + 1}")
 		
-		print("\n".join(map(str, self.entities)))
+		print("\n".join(map(str, self.entities)), end="\n\n")
 	
 
 	def load_level(self, id):
@@ -386,6 +394,7 @@ class GameForClient(GameBase):
 		self.client = GameClient(self, "client_unverified", ip=host_ip, port=port, nickname=nickname)
 		self.connected = False
 		self.spawn_pos = [0, 0]
+		print(self.get_player_name())
 
 
 	def get_player_name(self):
@@ -400,24 +409,29 @@ class GameForClient(GameBase):
 		self.get_main_player().pos = self.spawn_pos
 
 
-	def join_lobby(self, status_text):
+	def join_lobby(self, status_text, set_buttons_interactable):
 		status_text.set_text("[CONNECTING]: Attempting to connect to server...")
+		set_buttons_interactable(False)
 		threading.Thread(target=self.client.connect).start()
 		time.sleep(5)
 		
 		if self.connected:
 			status_text.set_text("[JOINING]: Connected, joining lobby...")
-			time.sleep(2)
+			time.sleep(3)
 			status_text.set_text(f"[JOINED]: You've joined the lobby as \"{self.client.nickname}\"")
 		else:
 			status_text.set_text("[TIMED OUT]: Failed to make connection, check IP and port.")
 		
-		return False
+		set_buttons_interactable(True)
 
 
 	def disconnect_from_server(self):
 		self.connected = False
+		for i in range(MAX_CLIENT_COUNT):
+			self.entities[i].unregister_client(i)
 		self.client.disconnect()
+		del self.entities
+		del self.client
 
 
 	""" Initialize the all previously connected clients' players if the connection is made the frist time.
@@ -427,19 +441,21 @@ class GameForClient(GameBase):
 		if not self.connected or re_initialized:
 			self.player_index = player_index
 			
-			for i in range(self.player_index + 1):
+			for i in range(MAX_CLIENT_COUNT):
 				if i == self.player_index:
 					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
 											player_id="main_player", re_initialized=re_initialized)
-				else:
+				elif i < len(nicknames):
 					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
 											player_id=f"player_{i + 1}", re_initialized=re_initialized)
+				else:
+					self.entities[i].unregister_client(i)
 			self.connected = True
 		else:
 			self.entities[player_index].initialize_client(nicknames[player_index],
 										client_id=client_ids[player_index], player_id=f"player_{player_index + 1}")
 		
-		print("\n".join(map(str, self.entities)))
+		print("\n".join(map(str, self.entities)), end="\n\n")
 
 
 	def load_level(self, id):

@@ -240,7 +240,7 @@ class InputField(UIBase):
 		if self.display_text.text == self.placeholder_text:
 			return ""
 			
-		return self.display_text.text
+		return self.display_text.text.strip()
 
 
 	def check_continuous_delete(self):

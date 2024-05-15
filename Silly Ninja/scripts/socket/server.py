@@ -128,6 +128,8 @@ class GameServer(SocketServer):
 	def __init__(self, ip, port):
 		super().__init__(ip, port)
 		self.clients = {}
+		self.client_ids = []
+		self.client_sockets = []
 
 
 	def client_count(self):
@@ -159,9 +161,10 @@ class GameServer(SocketServer):
 	def remove_client(self, address, removed_id, removed_index):
 		self.clients.pop(removed_id)
 		
-		nickname = self.nicknames.index(removed_index)
+		nickname = self.nicknames[removed_index]
 		print(f"[LEAVING]: {address} a.k.a \"{nickname}\" has left the game.")
 		self.nicknames.remove(nickname)
+		print(self.nicknames)
 		
 		self.broadcast(removed_id, f"PLAYER LEFT:{removed_index}")
 		
@@ -175,20 +178,24 @@ class GameServer(SocketServer):
 					if next is not None:
 						self.clients[f"client_{i}"] = next
 
+			self.client_ids = list(self.clients.keys())
+			self.client_sockets = list(self.clients.values())
+
 			index = 0
+			names = ','.join(self.nicknames)
+			ids = ','.join(self.client_ids)
 			for client_id in self.clients:
-				self.clients[client_id].send(f"RE_INITIALIZE:{index};{client_id};" +
-											f"{','.join(self.nicknames)};" +
-											f"{','.join(list(self.clients.keys()))}")
+				self.clients[client_id].send(f"RE_INITIALIZE:{index};{client_id};{names};{ids}".encode(FORMAT))
 				index += 1
 
 
 	def handle_client(self, client, address):
-		client_index = list(self.clients.values()).index(client)
-		client_id = list(self.clients.keys())[client_index]
 		while self.running:
 			try:
 				message = client.recv(1024).decode(FORMAT)
+				client_index = self.client_sockets.index(client)
+				client_id = self.client_ids[client_index]
+
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException("Client disconnected.")
 				elif message == "[START_GAME]":
@@ -208,6 +215,7 @@ class GameServer(SocketServer):
 		client.send("[NICKNAME]".encode(FORMAT))
 		nickname = client.recv(1024).decode(FORMAT)
 		self.nicknames.append(nickname)
+		print(self.nicknames)
 
 		client.send("[CLIENT_ID]".encode(FORMAT))
 		client_id = client.recv(1024).decode(FORMAT)
@@ -216,6 +224,8 @@ class GameServer(SocketServer):
 			client_id = f"client_{self.nicknames.index(nickname)}"
 
 		self.clients[client_id] = client
+		self.client_ids = list(self.clients.keys())
+		self.client_sockets = list(self.clients.values())
 
 		print(f"[JOINED]: {address} joined the game as \"{nickname}\".")
 		
@@ -224,7 +234,7 @@ class GameServer(SocketServer):
 		print(f"Index for {nickname}: {client_index}")
 		self.broadcast(client_id, f"NEW PLAYERS JOINED:{client_index};{client_id};" +
 								f"{','.join(self.nicknames)};" +
-								f"{','.join(list(self.clients.keys()))}", sendall=True)
+								f"{','.join(self.client_ids)}", sendall=True)
 
 		threading.Thread(target=self.handle_client, args=(client, address)).start()
 
