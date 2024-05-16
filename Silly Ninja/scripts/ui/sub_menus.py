@@ -110,6 +110,8 @@ class HostMenu(MenuBase):
 
 			if "[JOINED]" in self.status_text.text:
 				self.enter_lobby()
+			if self.game.running:
+				self.game.run()
 
 			mx, my = pygame.mouse.get_pos()
 
@@ -240,6 +242,8 @@ class JoinMenu(MenuBase):
 
 			if "[JOINED]" in self.status_text.text:
 				self.enter_lobby()
+			if self.game.running:
+				self.game.run()
 
 			mx, my = pygame.mouse.get_pos()
 
@@ -383,7 +387,7 @@ class Lobby(MenuBase):
 		print("Lobby running...")
 
 		while self.running:
-			self.running = self.game_instance.connected
+			self.running = self.game_instance.connected and not self.game_instance.running
 
 			MenuBase.screen.blit(self.background, (0, 0))
 
@@ -445,7 +449,14 @@ class Lobby(MenuBase):
 
 
 	def launch(self):
-		threading.Thread(target=self.game_instance.launch_session, args=(self.status_text,)).start()
+		threading.Thread(target=self.game_instance.launch_session, args=(self.status_text, self.set_buttons_interactable)).start()
+
+
+	def set_buttons_interactable(self, state):
+		if self.back_button.interactable != state:
+			self.back_button.interactable = bool(state)
+			if self.is_host:
+				self.launch_button.interactable = bool(state)
 
 
 	def back_out(self):

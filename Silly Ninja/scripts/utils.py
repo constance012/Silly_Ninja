@@ -37,4 +37,5 @@ def show_running_threads():
 
 
 if __name__ == '__main__':
-	print(len("cstt"))
+	a = [1, 2, 3, 4]
+	print(a[1:3])

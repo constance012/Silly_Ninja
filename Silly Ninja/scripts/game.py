@@ -158,19 +158,17 @@ PLAYERS = [
 ]
 
 
-class GameForHost(GameBase):
-	def initialize(self, server, host_ip, port, nickname):
-		self.server = server
-		
+class MultiplayerGameBase(GameBase):
+	def initialize(self):
 		# First 4 elements are players.
 		self.entities = PLAYERS.copy()
 		for player in self.entities:
 			player.game = self
 
 		self.player_index = -1
-		self.client = GameClient(self, "host", ip=host_ip, port=port, nickname=nickname)
+		self.client = None
 		self.connected = False
-		self.spawn_pos = [0, 0]
+		self.spawn_pos = (0, 0)
 
 
 	def get_player_name(self):
@@ -182,7 +180,66 @@ class GameForHost(GameBase):
 
 
 	def respawn(self):
-		self.get_main_player().pos = self.spawn_pos
+		self.get_main_player().pos = list(self.spawn_pos)
+		self.particles.clear()
+		self.projectiles.clear()
+		self.sparks.clear()
+
+		self.camera_scroll = [0, 0]
+		self.dead = 0
+		self.transition = -30
+
+
+	""" Initialize the all previously connected clients' players if the connection is made the frist time.
+		Or if the server forces re-initialization.
+		Otherwise, initialize just the newly connected client."""
+	def on_connection_made(self, player_index, nicknames, client_ids, re_initialized=False):
+		if not self.connected or re_initialized:
+			self.player_index = player_index
+			
+			for i in range(MAX_CLIENT_COUNT):
+				if i == self.player_index:
+					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
+											player_id="main_player", re_initialized=re_initialized)
+				elif i < len(nicknames):
+					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
+											player_id=f"player_{i + 1}", re_initialized=re_initialized)
+				else:
+					self.entities[i].unregister_client(i)
+			self.connected = True
+		else:
+			self.entities[player_index].initialize_client(nicknames[player_index],
+										client_id=client_ids[player_index], player_id=f"player_{player_index + 1}")
+		
+		print("\n".join(map(str, self.entities)), end="\n\n")
+
+
+	def load_level(self, id):
+		super().load_level(id)
+		enemy_count = 1
+		for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
+			if spawner.variant == 0:
+				# Set the spawn position for all 4 players at once.
+				self.spawn_pos = tuple(spawner.pos)
+				for i in range(MAX_CLIENT_COUNT):
+					self.entities[i].pos = list(self.spawn_pos)
+					self.entities[i].air_time = 0
+			else:
+				self.entities.append(Enemy(self, spawner.pos, (8, 15), id=f"enemy_{enemy_count}", client_id=self.client.client_id))
+				enemy_count += 1
+
+
+	def run(self):
+		super().run()
+		self.client.game_started = True
+
+
+
+class GameForHost(MultiplayerGameBase):
+	def initialize(self, server, host_ip, port, nickname):
+		super().initialize()
+		self.server = server
+		self.client = GameClient(self, "host", ip=host_ip, port=port, nickname=nickname)
 
 
 	def start_server(self, status_text, set_buttons_interactable):
@@ -217,57 +274,18 @@ class GameForHost(GameBase):
 		del self.client
 
 
-	def launch_session(self, status_text):
+	def launch_session(self, status_text, set_buttons_interactable):
 		status_text.set_text("[LAUNCHING]: Starting game session...")
+		set_buttons_interactable(False)
 		time.sleep(3)
 		self.client.send_manually("[START_GAME]")
-
-
-	""" Initialize the all previously connected clients' players if the connection is made the frist time.
-		Or if the server forces re-initialization.
-		Otherwise, initialize just the newly connected client."""
-	def on_connection_made(self, player_index, nicknames, client_ids, re_initialized=False):
-		if not self.connected or re_initialized:
-			self.player_index = player_index
-			
-			for i in range(MAX_CLIENT_COUNT):
-				if i == self.player_index:
-					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
-											player_id="main_player", re_initialized=re_initialized)
-				elif i < len(nicknames):
-					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
-											player_id=f"player_{i + 1}", re_initialized=re_initialized)
-				else:
-					self.entities[i].unregister_client(i)
-			self.connected = True
-		else:
-			self.entities[player_index].initialize_client(nicknames[player_index],
-										client_id=client_ids[player_index], player_id=f"player_{player_index + 1}")
-		
-		print("\n".join(map(str, self.entities)), end="\n\n")
-	
-
-	def load_level(self, id):
-		super().load_level(id)
-		enemy_count = 1
-		for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
-			if spawner.variant == 0:
-				# Set the spawn position for all 4 players at once.
-				self.spawn_pos = spawner.pos
-				for i in range(4):
-					self.entities[i].pos = self.spawn_pos
-					self.entities[i].air_time = 0
-			else:
-				self.entities.append(Enemy(self, spawner.pos, (8, 15), id=f"enemy_{enemy_count}", client_id=self.client.client_id))
-				enemy_count += 1
-
-		self.client.game_started = True
+		set_buttons_interactable(True)
 
 
 	def run(self):
 		super().run()
 
-		while self.running:
+		while self.running and self.connected:
 			self.outline_display.fill((0, 0, 0, 0))
 			self.normal_display.blit(self.assets["background"], (0, 0))
 
@@ -275,6 +293,7 @@ class GameForHost(GameBase):
 
 			# Handle level transitions.
 			if not len(self.entities[4:]):
+				print("Entering the next level...")
 				self.transition += 1
 				if self.transition > 30:
 					self.level_id = min(self.level_id + 1, len(os.listdir("assets/maps")) - 1)
@@ -305,11 +324,12 @@ class GameForHost(GameBase):
 					self.entities.remove(enemy)
 
 			# Update and render the main player and other initialized players.
-			for player in self.entites[:4]:
-				if not self.dead and player.id == "main_player":
-					self.get_main_player().update(self.tilemap, movement=(self.movement[1] - self.movement[0], 0))
-					self.get_main_player().render(self.outline_display, offset=render_scroll)
-				elif player.initialized:
+			if not self.dead:
+				self.get_main_player().update(self.tilemap, movement=(self.movement[1] - self.movement[0], 0))
+				self.get_main_player().render(self.outline_display, offset=render_scroll)
+			
+			for player in self.entities[:4]:
+				if player.initialized and player.id != "main_player":
 					player.render(self.outline_display, offset=render_scroll)
 
 			# Render the gun projectiles.
@@ -346,11 +366,13 @@ class GameForHost(GameBase):
 					self.shutdown_server()
 					pygame.quit()
 					sys.exit()
+				
 				if event.type == pygame.KEYDOWN:
 					if event.key == pygame.K_ESCAPE:
 						self.shutdown_server()
 						self.running = False
 						fade_out((self.normal_display.get_width(), self.normal_display.get_height()), self.normal_display)
+						return
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
 						self.movement[0] = True
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -360,6 +382,7 @@ class GameForHost(GameBase):
 							self.sounds["jump"].play()
 					if event.key == pygame.K_LSHIFT:
 						self.get_main_player().dash()
+				
 				if event.type == pygame.KEYUP:
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
 						self.movement[0] = False
@@ -373,7 +396,8 @@ class GameForHost(GameBase):
 
 			# Render the players' name tags over anything else.
 			for player in self.entities[:4]:
-				player.render_name_tag(self.normal_display, offset=render_scroll)
+				if player.initialized:
+					player.render_name_tag(self.normal_display, offset=render_scroll)
 
 			# Finally, scale and blit all of them on the main screen, along with the screenshake effect.
 			screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
@@ -383,30 +407,10 @@ class GameForHost(GameBase):
 			self.clock.tick(60)
 
 
-class GameForClient(GameBase):
+class GameForClient(MultiplayerGameBase):
 	def initialize(self, host_ip, port, nickname):
-		# First 4 elements are players.
-		self.entities = PLAYERS.copy()
-		for player in self.entities:
-			player.game = self
-
-		self.player_index = -1
+		super().initialize()
 		self.client = GameClient(self, "client_unverified", ip=host_ip, port=port, nickname=nickname)
-		self.connected = False
-		self.spawn_pos = [0, 0]
-		print(self.get_player_name())
-
-
-	def get_player_name(self):
-		return self.client.nickname
-
-
-	def get_main_player(self):
-		return self.entities[self.player_index]
-
-
-	def respawn(self):
-		self.get_main_player().pos = self.spawn_pos
 
 
 	def join_lobby(self, status_text, set_buttons_interactable):
@@ -434,51 +438,10 @@ class GameForClient(GameBase):
 		del self.client
 
 
-	""" Initialize the all previously connected clients' players if the connection is made the frist time.
-		Or if the server forces re-initialization.
-		Otherwise, initialize just the newly connected client."""
-	def on_connection_made(self, player_index, nicknames, client_ids, re_initialized=False):
-		if not self.connected or re_initialized:
-			self.player_index = player_index
-			
-			for i in range(MAX_CLIENT_COUNT):
-				if i == self.player_index:
-					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
-											player_id="main_player", re_initialized=re_initialized)
-				elif i < len(nicknames):
-					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
-											player_id=f"player_{i + 1}", re_initialized=re_initialized)
-				else:
-					self.entities[i].unregister_client(i)
-			self.connected = True
-		else:
-			self.entities[player_index].initialize_client(nicknames[player_index],
-										client_id=client_ids[player_index], player_id=f"player_{player_index + 1}")
-		
-		print("\n".join(map(str, self.entities)), end="\n\n")
-
-
-	def load_level(self, id):
-		super().load_level(id)
-		enemy_count = 1
-		for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
-			self.spawn_pos = spawner.pos
-			if spawner.variant == 0:
-				# Set the spawn position for all 4 players at once.
-				for i in range(4):
-					self.entities[i].pos = self.spawn_pos
-					self.entities[i].air_time = 0
-			else:
-				self.entities.append(Enemy(self, spawner.pos, (8, 15), id=f"enemy_{enemy_count}", client_id=self.client.client_id))
-				enemy_count += 1
-
-		self.client.game_started = True
-
-
 	def run(self):
 		super().run()
 
-		while self.running:
+		while self.running and self.connected:
 			self.outline_display.fill((0, 0, 0, 0))
 			self.normal_display.blit(self.assets["background"], (0, 0))
 
@@ -486,6 +449,7 @@ class GameForClient(GameBase):
 
 			# Handle level transitions.
 			if not len(self.entities[4:]):
+				print("Entering the next level...")
 				self.transition += 1
 				if self.transition > 30:
 					self.level_id = min(self.level_id + 1, len(os.listdir("assets/maps")) - 1)
@@ -513,11 +477,12 @@ class GameForClient(GameBase):
 				enemy.render(self.outline_display, offset=render_scroll)
 
 			# Update and render the main player and other initialized players.
-			for player in self.entites[:4]:
-				if not self.dead and player.id == "main_player":
-					self.get_main_player().update(self.tilemap, movement=(self.movement[1] - self.movement[0], 0))
-					self.get_main_player().render(self.outline_display, offset=render_scroll)
-				elif player.initialized:
+			if not self.dead:
+				self.get_main_player().update(self.tilemap, movement=(self.movement[1] - self.movement[0], 0))
+				self.get_main_player().render(self.outline_display, offset=render_scroll)
+			
+			for player in self.entities[:4]:
+				if player.initialized and player.id != "main_player":
 					player.render(self.outline_display, offset=render_scroll)
 
 			# Render the gun projectiles.
@@ -554,11 +519,13 @@ class GameForClient(GameBase):
 					self.disconnect_from_server()
 					pygame.quit()
 					sys.exit()
+				
 				if event.type == pygame.KEYDOWN:
 					if event.key == pygame.K_ESCAPE:
 						self.disconnect_from_server()
 						self.running = False
 						fade_out((self.normal_display.get_width(), self.normal_display.get_height()), self.normal_display)
+						return
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
 						self.movement[0] = True
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -568,6 +535,7 @@ class GameForClient(GameBase):
 							self.sounds["jump"].play()
 					if event.key == pygame.K_LSHIFT:
 						self.get_main_player().dash()
+				
 				if event.type == pygame.KEYUP:
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
 						self.movement[0] = False
@@ -581,7 +549,8 @@ class GameForClient(GameBase):
 
 			# Render the players' name tags over anything else.
 			for player in self.entities[:4]:
-				player.render_name_tag(self.normal_display, offset=render_scroll)
+				if player.initialized:
+					player.render_name_tag(self.normal_display, offset=render_scroll)
 
 			# Finally, scale and blit all of them on the main screen, along with the screenshake effect.
 			screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)

@@ -180,7 +180,7 @@ class InputField(UIBase):
 
 		self.alt_held = False
 		self.backspace_held = False
-		self.delete_timer = 60
+		self.delete_timer = 45
 
 
 	def update(self, mx, my, click):

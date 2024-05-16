@@ -179,9 +179,10 @@ class Player(PhysicsEntity):
 	def __init__(self, player_name, game, pos, size, id="", client_id="solo"):
 		super().__init__(game, "player", pos, size, id=id, client_id=client_id)
 		self.air_time = 0
-		self.jumps = 1
+		self.jump_count = 1
 		self.dashing = 0
 		self.wall_slide = False
+		self.jumped = False
 
 		self.player_name = player_name
 		self.name_text = Text(self.player_name, "gamer", self.pos, size=10, color=(255, 255, 255))
@@ -199,6 +200,7 @@ class Player(PhysicsEntity):
 	def initialize_client(self, nickname, client_id, player_id, re_initialized=False):
 		if not self.initialized or re_initialized:
 			self.player_name = nickname
+			self.name_text.set_text(self.player_name)
 			self.client_id = client_id
 			self.id = player_id
 			self.initialized = True
@@ -207,6 +209,7 @@ class Player(PhysicsEntity):
 
 	def unregister_client(self, client_index):
 		self.player_name = f"unnamed_player_{client_index + 1}"
+		self.name_text.set_text(self.player_name)
 		self.id = f"player_{client_index + 1}"
 		self.client_id = ""
 		self.initialized = False
@@ -223,13 +226,14 @@ class Player(PhysicsEntity):
 
 		# Handle air time and reset when grounded.
 		self.air_time += 1
-		if self.air_time > 120:
+		if self.air_time > 120 and self.id == "main_player":
 			self.game.dead += 1
 			self.game.screenshake = max(self.game.screenshake, 16)
 
 		if self.collisions["down"]:
 			self.air_time = 0
-			self.jumps = 1
+			self.jump_count = 1
+			self.jumped = False
 
 		# Handle dashing.
 		if abs(self.dashing) in {60, 50}:
@@ -289,29 +293,30 @@ class Player(PhysicsEntity):
 
 
 	def jump(self):
+		self.jumped = True
 		if self.wall_slide:
 			if self.facing_left and self.last_movement[0] < 0:
 				self.velocity[0] = 2.5
 				self.velocity[1] = -2.5
 				self.air_time = 5
-				self.jumps = max(self.jumps - 1, 0)
+				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 			elif not self.facing_left and self.last_movement[0] > 0:
 				self.velocity[0] = -2.5
 				self.velocity[1] = -2.5
 				self.air_time = 5
-				self.jumps = max(self.jumps - 1, 0)
+				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 		
-		elif self.jumps:
+		elif self.jump_count:
 			self.velocity[1] = -3
-			self.jumps -= 1
+			self.jump_count -= 1
 			self.air_time = 5
 			return True
 
 		return False
 
-
+		
 	def dash(self):
 		if not self.dashing:
 			self.game.sounds["dash"].play()

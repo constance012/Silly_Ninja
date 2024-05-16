@@ -116,7 +116,7 @@ class GameClient(ChatClient):
 		self.entities = game.entities  # A list of entities to update.
 		self.tilemap = game.tilemap
 
-		self.fps = 30
+		self.fps = 60
 		self.clock = pygame.time.Clock()
 
 		self.client_id = client_id  # Host, Client1, Client2,...
@@ -136,6 +136,26 @@ class GameClient(ChatClient):
 			print("[CLOSED]: Server has shutdown.")
 		except Exception as e:
 			print(f"[ERROR]: An error occurred when trying to disconnect from the server.\n{e}")
+
+
+	def update_entity(self, sender_id, infos):
+		# Only update other clients' players and enemies.
+		for entity in self.entities.copy():
+			if entity.id == infos[0]:
+				# [player_ID, last_movement[0], last_movement[1], dashing, jump]
+				if entity.type == "player":
+					print(f"{self.client_id} updating player: {entity.id}")
+					entity.update(self.tilemap, movement=tuple(map(int, infos[1:3])))
+					entity.dashing = int(infos[3])
+					if infos[4] == "True":
+						entity.jump()
+				
+				# [enemy_ID, walking, facing_left, is_death]
+				elif entity.type == "enemy" and sender_id == "host":
+					entity.update(self.tilemap, walking=int(infos[1]), facing_left=infos[2] == "True")
+					if infos[3] == "True":
+						self.entities.remove(entity)
+				return
 
 
 	def receive(self):
@@ -176,22 +196,12 @@ class GameClient(ChatClient):
 					self.game.on_connection_made(index, infos[2].split(","), infos[3].split(","), re_initialized=True)
 				
 				elif self.game_started:
-					message_segments = message.split(";")
+					#print(f"RECEIVED: {message}")
+					message_segments = message.split("|")[0].split(";")
 					sender_id = message_segments[0]
-					for movement in message_segments[1:]:
-						infos = movement.split(",")
-						for entity in self.entities.copy():
-							# Only update other clients' players and enemies.
-							if entity.id == infos[0]:
-								# [player_ID, last_movement[0], last_movement[1]]
-								if entity.type == "player" and entity.id != "main_player":
-									entity.update(self.tilemap, movement=tuple(map(int, infos[1:])))
-								# [enemy_ID, walking, facing_left, is_death]
-								elif entity.type == "enemy" and sender_id == "host":
-									entity.update(self.tilemap, walking=int(infos[1]), facing_left=bool(infos[2]))
-									if bool(infos[3]):
-										self.entities.remove(entity)
-								break
+					for segment in message_segments[1:]:
+						infos = segment.split(",")
+						self.update_entity(sender_id, infos)
 
 				self.clock.tick(self.fps)
 		
@@ -215,17 +225,21 @@ class GameClient(ChatClient):
 					
 					# Send info of both entity types if this is the host.
 					# Otherwise only send info of the corresponding client's player.
-					for entity in self.entities.copy():
-						if entity.type == "player" and entity.id == "main_player":
-							# [player_ID, last_movement[0], last_movement[1]]
-							message.append(f"player_{self.client_index + 1},{entity.last_movement[0]},{entity.last_movement[1]}")
-						
-						elif entity.type == "enemy" and self.client_id == "host":
+					# [player_ID, last_movement[0], last_movement[1], dashing, jump]
+					main_player = self.game.get_main_player()
+					message.append(f"player_{self.client_index + 1}," +
+									f"{main_player.last_movement[0]},{main_player.last_movement[1]}," +
+									f"{main_player.dashing}," +
+									f"{main_player.jumped}")
+
+					if self.client_id == "host":
+						for entity in self.entities.copy()[4:]:
 							# [enemy_ID, walking, facing_left, is_death]
 							message.append(f"{entity.id},{entity.walking},{entity.facing_left},{entity.is_death}")
 
-					message = ";".join(message)
-					print(message)
+					# Add a delimeter between each message to avoid duplication.
+					message = f"{';'.join(message)}|"
+					#print(f"SENT: {message}")
 					self.client_socket.send(message.encode(FORMAT))
 
 				self.clock.tick(self.fps)

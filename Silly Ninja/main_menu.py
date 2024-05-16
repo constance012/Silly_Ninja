@@ -37,7 +37,7 @@ class MainMenu(MenuBase):
 	def run(self):
 		pygame.mixer.music.load("assets/music.wav")
 		pygame.mixer.music.set_volume(0.6)
-		pygame.mixer.music.play(-1)
+		#pygame.mixer.music.play(-1)
 		
 		while self.running:
 			MenuBase.screen.blit(self.background, (0, 0))
