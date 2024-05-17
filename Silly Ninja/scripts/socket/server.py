@@ -154,7 +154,11 @@ class GameServer(SocketServer):
 	def broadcast(self, sender_id, message):
 		# Broadcast the message to all connected clients, except the sender.
 		# Send to all clients if the message starts with an asterisk.
-		sendall = message.startswith("*")
+		sendall = False
+		if message.startswith("*"):
+			sendall = True
+			message = message[1:]
+
 		for client_id in self.clients:
 			if client_id != sender_id or sendall:
 				self.clients[client_id].send(message.encode(FORMAT))
@@ -200,8 +204,6 @@ class GameServer(SocketServer):
 
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException("Client disconnected.")
-				elif "START_GAME" in message:
-					self.broadcast(client_id, message)
 				else:
 					self.broadcast(client_id, message)
 			except Exception:
@@ -219,7 +221,7 @@ class GameServer(SocketServer):
 		self.nicknames.append(nickname)
 		print(self.nicknames)
 
-		client.send("[CLIENT_ID]".encode(FORMAT))
+		client.send("[CLIENT ID]".encode(FORMAT))
 		client_id = client.recv(1024).decode(FORMAT)
 
 		if client_id == "client_unverified":

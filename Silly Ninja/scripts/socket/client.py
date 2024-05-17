@@ -125,17 +125,18 @@ class GameClient(ChatClient):
 
 
 	def disconnect(self):
-		try:
-			print(f"[DISCONNECTING]: You have disconnected from the server.")
-			self.running = False
-			self.game_started = False
-			time.sleep(0.1)
-			self.client_socket.send(DISCONNECT_MESSAGE.encode(FORMAT))
-			self.client_socket.close()
-		except ConnectionResetError:
-			print("[CLOSED]: Server has shutdown.")
-		except Exception as e:
-			print(f"[ERROR]: An error occurred when trying to disconnect from the server.\n{e}")
+		if self.running:
+			try:
+				print(f"[DISCONNECTING]: You have disconnected from the server.")
+				self.running = False
+				self.game_started = False
+				time.sleep(0.1)
+				self.client_socket.send(DISCONNECT_MESSAGE.encode(FORMAT))
+				self.client_socket.close()
+			except (ConnectionError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError):
+				print("[CLOSED]: Server has shutdown.")
+			except Exception:
+				print(f"[ERROR]: An error occurred when trying to disconnect from the server.\n{traceback.format_exc()}")
 
 
 	def update_entity(self, sender_id, infos):
@@ -151,32 +152,31 @@ class GameClient(ChatClient):
 					if infos[6] == "True":
 						entity.jump()
 				
-				elif entity.type == "enemy":
-					# [enemy_ID, walking, facing_left, is_dead]
-					if sender_id == "host":
-						dead = entity.update(self.tilemap, walking=int(infos[1]),
-											facing_left=infos[2] == "True", was_dead=infos[3] == "True")
-						if dead:
-							self.entities.remove(entity)
-					# [enemy_ID, is_dead]
-					else:
-						entity.was_dead = infos[1] == "True"
+				elif entity.type == "enemy" and sender_id == "host":
+					# [enemy_ID, walking, facing_left]
+					dead = entity.update(self.tilemap, walking=int(infos[1]), facing_left=infos[2] == "True")
+					if dead:
+						self.entities.remove(entity)
 				return
 
 
 	def receive(self):
 		while self.running:
 			try:
-				message = self.client_socket.recv(1024).decode(FORMAT).split("|")[0]
+				message = self.client_socket.recv(1024).decode(FORMAT)
+				#print(f"RECEIVED: {message}")
+				message = message.split("|")[0]
 
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException()
 				elif message == "[NICKNAME]":
 					self.client_socket.send(self.nickname.encode(FORMAT))
-				elif message == "[CLIENT_ID]":
+				elif message == "[CLIENT ID]":
 					self.client_socket.send(self.client_id.encode(FORMAT))
-				elif "START_GAME" in message:
+				elif message == "[START GAME]":
 					self.game.start_game()
+				elif "PLAYER READY" in message:
+					self.game.ready_for_launch()
 				
 				elif "NEW PLAYERS JOINED" in message:
 					# [str(index), str(client_id), str(nicknames), str(client_ids)]
@@ -186,6 +186,7 @@ class GameClient(ChatClient):
 					if self.client_index == -1:
 						self.client_index = index
 						self.client_id = player_infos[1]
+
 					# [int(index), str(client_id), list(nicknames), list(client_ids)]
 					self.game.on_connection_made(index, player_infos[2].split(","), player_infos[3].split(","))
 					
@@ -202,7 +203,6 @@ class GameClient(ChatClient):
 					self.game.on_connection_made(index, infos[2].split(","), infos[3].split(","), re_initialized=True)
 				
 				elif self.game_started:
-					#print(f"RECEIVED: {message}")
 					message_segments = message.split(";")
 					sender_id = message_segments[0]
 					for segment in message_segments[1:]:
@@ -212,15 +212,15 @@ class GameClient(ChatClient):
 				self.clock.tick(self.fps)
 		
 			except ClientDisconnectException:
-				if self.client_id == "host":
-					self.disconnect()
-				else:
-					self.game.disconnect_from_server()
+				self.game.disconnect_from_server()
 			
+			except (ConnectionError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError):
+				print("[INTERRUPTED]: Connection has been interrupted. Disconnecting...")
+				self.game.disconnect_from_server()
+
 			except Exception:
-				if self.running:
-					print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
-					self.disconnect()
+				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+				self.game.disconnect_from_server()
 
 
 	def send(self):
@@ -235,23 +235,17 @@ class GameClient(ChatClient):
 					main_player = self.game.get_main_player()
 					message.append(f"player_{self.client_index + 1}," +
 									f"{main_player.last_movement[0]},{main_player.last_movement[1]}," +
-									f"{main_player.pos[0]},{main_player.pos[1]}," +
+									f"{main_player.pos[0]:.1f},{main_player.pos[1]:.1f}," +
 									f"{main_player.dashing}," +
 									f"{main_player.jumped}," +
 									f"{main_player.died}")
 
 					if self.client_id == "host":
 						for entity in self.entities[4:]:
-							# [enemy_ID, walking, facing_left, is_dead]
-							message.append(f"{entity.id},{entity.walking},{entity.facing_left},{entity.is_dead}")
+							# [enemy_ID, walking, facing_left]
+							message.append(f"{entity.id},{entity.walking},{entity.facing_left}")
 							if entity.is_dead:
 								self.entities.remove(entity)
-					
-					elif len(self.game.synced_enemies) > 0:
-						for enemy in self.game.synced_enemies.copy():
-							print(enemy)
-							message.append(f"{enemy.id},{enemy.is_dead}")
-							self.game.synced_enemies.remove(enemy)
 
 					# Add a delimeter between each message to avoid duplication.
 					message = f"{';'.join(message)}|"
@@ -260,10 +254,13 @@ class GameClient(ChatClient):
 
 				self.clock.tick(self.fps)
 
+			except (ConnectionError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError, AttributeError):
+				print("[INTERRUPTED]: Connection has been interrupted. Disconnecting...")
+				self.game.disconnect_from_server()
+
 			except Exception:
-				if self.running:
-					print(f"[ERROR]: An unexpected error occurred!")
-					self.disconnect()
+				print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+				self.game.disconnect_from_server()
 
 
 	def connect(self):
@@ -276,15 +273,15 @@ class GameClient(ChatClient):
 
 			return True
 		
-		except ConnectionRefusedError:
+		except (ConnectionRefusedError, TimeoutError):
 			print("[ERROR]: Connect failed, please check the server's IP and Port, then try again.")
 			print(traceback.format_exc())
-			self.client_socket.close()
+			self.game.disconnect_from_server()
 		
 		except (ConnectionResetError, ConnectionAbortedError):
 			print("[ERROR]: Connection disrupted, possibly due to a forcibly closed session from the server side or network error.")
 			print(traceback.format_exc())
-			self.client_socket.close()
+			self.game.disconnect_from_server()
 
 
 if __name__ == "__main__":

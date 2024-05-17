@@ -192,6 +192,11 @@ class MultiplayerGameBase(GameBase):
 		self.transition = -30
 
 
+	def ready_for_launch(self):
+		for i in range(MAX_CLIENT_COUNT):
+			self.entities[i].ready = self.entities[i].initialized
+
+
 	""" Initialize the all previously connected clients' players if the connection is made the frist time.
 		Or if the server forces re-initialization.
 		Otherwise, initialize just the newly connected client."""
@@ -199,9 +204,10 @@ class MultiplayerGameBase(GameBase):
 		if not self.connected or re_initialized:
 			self.player_index = player_index
 			
+			main_player = self.get_main_player()
 			for i in range(MAX_CLIENT_COUNT):
 				if i == self.player_index:
-					self.get_main_player().initialize_client(nicknames[i], client_id=client_ids[i],
+					main_player.initialize_client(nicknames[i], client_id=client_ids[i],
 											player_id="main_player", re_initialized=re_initialized)
 				elif i < len(nicknames):
 					self.entities[i].initialize_client(nicknames[i], client_id=client_ids[i],
@@ -231,10 +237,18 @@ class MultiplayerGameBase(GameBase):
 				enemy_count += 1
 
 
+	def disconnect_from_server(self):
+		self.running = False
+		self.connected = False
+		for i in range(MAX_CLIENT_COUNT):
+			self.entities[i].unregister_client(i)
+		self.client.disconnect()
+		self.entities.clear()
+
+
 	def run(self):
 		super().run()
 		self.client.game_started = True
-
 
 
 class GameForHost(MultiplayerGameBase):
@@ -257,8 +271,9 @@ class GameForHost(MultiplayerGameBase):
 			
 			if self.connected:
 				status_text.set_text("[JOINING]: Lobby created, joining...")
-				time.sleep(3)
+				time.sleep(2)
 				status_text.set_text(f"[JOINED]: You've hosted and joined the lobby as \"{self.client.nickname}\"")
+				self.client.send_manually(f"*[PLAYER READY]")
 			else:
 				status_text.set_text("[ERROR]: Failed to make connection, check IP and port.")
 		else:
@@ -267,21 +282,11 @@ class GameForHost(MultiplayerGameBase):
 		set_buttons_interactable(True)
 
 
-	def shutdown_server(self):
-		self.running = False
-		self.connected = False
-		for i in range(MAX_CLIENT_COUNT):
-			self.entities[i].unregister_client(i)
-		self.server.shutdown()
-		del self.entities
-		del self.client
-
-
 	def launch_session(self, status_text, set_buttons_interactable):
 		status_text.set_text("[LAUNCHING]: Starting game session...")
 		set_buttons_interactable(False)
 		time.sleep(3)
-		self.client.send_manually("*[START_GAME]")
+		self.client.send_manually("*[START GAME]")
 		set_buttons_interactable(True)
 
 
@@ -372,13 +377,13 @@ class GameForHost(MultiplayerGameBase):
 			# Events handling.
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
-					self.shutdown_server()
+					self.server.shutdown()
 					pygame.quit()
 					sys.exit()
 				
 				if event.type == pygame.KEYDOWN:
 					if event.key == pygame.K_ESCAPE:
-						self.shutdown_server()
+						self.server.shutdown()
 						self.running = False
 						fade_out((self.normal_display.get_width(), self.normal_display.get_height()), self.normal_display)
 						return
@@ -387,7 +392,6 @@ class GameForHost(MultiplayerGameBase):
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
 						self.movement[1] = True
 					if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
-						self.get_main_player().jumped = True
 						if self.get_main_player().jump():
 							self.sounds["jump"].play()
 					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
@@ -421,7 +425,6 @@ class GameForClient(MultiplayerGameBase):
 	def initialize(self, host_ip, port, nickname):
 		super().initialize()
 		self.client = GameClient(self, "client_unverified", ip=host_ip, port=port, nickname=nickname)
-		self.synced_enemies = []
 
 
 	def join_lobby(self, status_text, set_buttons_interactable):
@@ -434,21 +437,11 @@ class GameForClient(MultiplayerGameBase):
 			status_text.set_text("[JOINING]: Connected, joining lobby...")
 			time.sleep(3)
 			status_text.set_text(f"[JOINED]: You've joined the lobby as \"{self.client.nickname}\"")
+			self.client.send_manually(f"*[PLAYER READY]")
 		else:
-			status_text.set_text("[TIMED OUT]: Failed to make connection, check IP and port.")
+			status_text.set_text("[TIMED OUT]: Host not found, check IP and port.")
 		
 		set_buttons_interactable(True)
-
-
-	def disconnect_from_server(self):
-		self.running = False
-		self.connected = False
-		self.synced_enemies.clear()
-		for i in range(MAX_CLIENT_COUNT):
-			self.entities[i].unregister_client(i)
-		self.client.disconnect()
-		del self.entities
-		del self.client
 
 
 	def run(self):
@@ -552,7 +545,6 @@ class GameForClient(MultiplayerGameBase):
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
 						self.movement[1] = True
 					if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
-						self.get_main_player().jumped = True
 						if self.get_main_player().jump():
 							self.sounds["jump"].play()
 					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
@@ -598,8 +590,7 @@ class GameSolo(GameBase):
 		self.enemies = []
 		for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
 			if spawner.variant == 0:
-				self.player.pos = spawner.pos
-				self.player.air_time = 0
+				self.player.respawn(spawner.pos)
 			else:
 				self.enemies.append(Enemy(self, spawner.pos, (8, 15)))
 
@@ -613,14 +604,14 @@ class GameSolo(GameBase):
 			self.screenshake = max(self.screenshake - 1, 0)
 
 			# Handle level transitions.
-			if not len(self.entities[4:]) and self.level_id < self.max_level:
-				print("Entering the next level...")
+			if not len(self.enemies) and self.level_id < self.max_level:
 				self.transition += 1
 				if self.transition > 30:
+					print("Entering the next level...")
 					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
-				self.transition += 11
+				self.transition += 1
 
 			# Update the respawn timer.
 			if self.dead:
@@ -664,9 +655,10 @@ class GameSolo(GameBase):
 				# If the player gets shot.
 				elif abs(self.player.dashing) < 50 and self.player.rect().collidepoint(projectile.pos):
 					self.projectiles.remove(projectile)
+					self.sounds["hit"].play()
+					self.player.died = True
 					self.dead += 1
 					self.screenshake = max(self.screenshake, 16)
-					self.sounds["hit"].play()
 					for i in range(30):
 						angle = random.random() * math.pi * 2
 						self.sparks.append(Spark(self.player.rect().center, angle, random.random() + 2))

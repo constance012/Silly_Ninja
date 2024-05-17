@@ -212,6 +212,9 @@ class InputField(UIBase):
 					self.display_text.set_text(pyperclip.paste())
 				elif event.key == pygame.K_c and self.alt_held:
 					pyperclip.copy(self.display_text.text)
+				elif event.key == pygame.K_x and self.alt_held:
+					pyperclip.copy(self.display_text.text)
+					self.display_text.set_text("")
 				
 				elif event.key == pygame.K_RETURN:
 					if self.on_submit is not None:

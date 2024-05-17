@@ -1,5 +1,6 @@
 import math
 import random
+import time
 import pygame
 
 from scripts.visual_effects import Particle, Projectile, Spark
@@ -96,7 +97,6 @@ class Enemy(PhysicsEntity):
 	def __init__(self, game, pos, size, id="", client_id="solo"):
 		super().__init__(game, "enemy", pos, size, id=id, client_id=client_id)
 		self.walking = 0
-		self.was_dead = False
 		self.is_dead = False
 		self.fired = False
 		self.set_action("idle")
@@ -126,7 +126,25 @@ class Enemy(PhysicsEntity):
 		return False
 
 
-	def update(self, tilemap, movement=(0, 0), walking=0, facing_left=False, was_dead=False):
+	def check_for_dead(self, player):
+		if abs(player.dashing) >= 50:
+			if self.rect().colliderect(player.rect()):
+				self.game.screenshake = max(self.game.screenshake, 16)
+				self.game.sounds["hit"].play()
+				for i in range(20, 31):
+					angle = random.random() * math.pi * 2
+					self.game.sparks.append(Spark(self.rect().center, angle, random.random() * 2 + 2))
+
+					speed = random.random() * 5
+					velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
+					self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
+				self.game.sparks.append(Spark(self.rect().center, 0, random.random() + 5))
+				self.game.sparks.append(Spark(self.rect().center, math.pi, random.random() + 5))
+
+				self.is_dead = True
+
+
+	def update(self, tilemap, movement=(0, 0), walking=0, facing_left=False):
 		# Continue previous movement, if doesn't finish yet.
 		if self.walking:
 			# Check for flipping against ground and wall tiles in front of the moving direction.
@@ -166,26 +184,13 @@ class Enemy(PhysicsEntity):
 		else:
 			self.set_action("idle")
 
-		# Dies if takes damage from the player's dash or was dead on other clients' machines.
-		if not self.was_dead:
-			self.was_dead = was_dead
-		if abs(self.game.get_main_player().dashing) >= 50 or self.was_dead:
-			if self.rect().colliderect(self.game.get_main_player().rect()) or self.was_dead:
-				self.game.screenshake = max(self.game.screenshake, 16)
-				self.game.sounds["hit"].play()
-				for i in range(20, 31):
-					angle = random.random() * math.pi * 2
-					self.game.sparks.append(Spark(self.rect().center, angle, random.random() * 2 + 2))
-
-					speed = random.random() * 5
-					velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
-					self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
-				self.game.sparks.append(Spark(self.rect().center, 0, random.random() + 5))
-				self.game.sparks.append(Spark(self.rect().center, math.pi, random.random() + 5))
-
-				self.is_dead = True
-				if "client" in self.client_id and not self.was_dead:
-					self.game.synced_enemies.append(self)
+		# Dies if takes damage from the players' dashes or was dead on other clients' machines.
+		if self.client_id != "solo":
+			for player in self.game.entities[:4]:
+				if self.check_for_dead(player):
+					break
+		else:
+			self.check_for_dead(self.game.get_main_player())
 
 		return self.is_dead
 
@@ -218,13 +223,15 @@ class Player(PhysicsEntity):
 		self.name_text = Text(self.player_name, "gamer", self.pos, size=15, color=DARK_SLATE_GRAY)
 		self.text_offset = (4, -15)
 		self.initialized = False
+		self.ready = False
 
 		if self.client_id == "solo":
 			self.set_action("idle")
 
 
 	def __repr__(self):
-		return f"Player: [ID={self.id:<12}, Client_ID={self.client_id:<9}, Nickname={self.player_name:^20}, Initialized={self.initialized!s:<5}]"
+		return (f"Player: [ID={self.id:<12}, Client_ID={self.client_id:<9}, Nickname={self.player_name:^20}, " +
+				f"Initialized={self.initialized!s:<5}, Ready={self.ready!s:<5}]")
 
 
 	def initialize_client(self, nickname, client_id, player_id, re_initialized=False):
@@ -233,11 +240,13 @@ class Player(PhysicsEntity):
 			self.client_id = client_id
 			self.id = player_id
 			self.name_text.set_text(self.player_name)
+			
 			if self.id == "main_player":
 				self.name_text.color = DARK_GOLDEN_ROD
 			
 			self.initialized = True
 			self.set_action("idle")
+
 
 
 	def unregister_client(self, client_index):
@@ -247,6 +256,7 @@ class Player(PhysicsEntity):
 		self.id = f"player_{client_index + 1}"
 		self.client_id = ""
 		self.initialized = False
+		self.ready = False
 
 
 	def respawn(self, spawn_pos):
@@ -312,10 +322,10 @@ class Player(PhysicsEntity):
 
 		# Handle wall slide.
 		self.wall_slide = False
-		if (self.collisions["right"] or self.collisions["left"]) and self.air_time > 4:
+		if (self.collisions["right"] or self.collisions["left"]) and self.air_time > 7:
 			self.wall_slide = True
 			self.jumped = False
-			self.air_time = 5
+			self.air_time = 8
 			self.velocity[1] = min(self.velocity[1], 0.5)
 			self.facing_left = self.collisions["left"]
 			self.set_action("wall_slide")
@@ -338,30 +348,30 @@ class Player(PhysicsEntity):
 
 
 	def jump(self):
-		if self.wall_slide:
-			if self.facing_left and self.last_movement[0] < 0:
-				self.velocity[0] = 2.5
-				self.velocity[1] = -2.5
-				self.air_time = 5
-				self.jump_count = max(self.jump_count - 1, 0)
-				return True
-			elif not self.facing_left and self.last_movement[0] > 0:
-				self.velocity[0] = -2.5
-				self.velocity[1] = -2.5
-				self.air_time = 5
-				self.jump_count = max(self.jump_count - 1, 0)
-				return True
-		
-		elif self.jump_count:
-			self.velocity[1] = -3
-			self.jump_count -= 1
-			self.air_time = 5
-			return True
+		if not self.died:
+			if self.wall_slide:
+				self.jumped = True
+				if self.facing_left and self.last_movement[0] < 0:
+					self.velocity[0] = 2.5
+					self.velocity[1] = -2.5
+					self.air_time = 8
+					self.jump_count = max(self.jump_count - 1, 0)
+				elif not self.facing_left and self.last_movement[0] > 0:
+					self.velocity[0] = -2.5
+					self.velocity[1] = -2.5
+					self.air_time = 8
+					self.jump_count = max(self.jump_count - 1, 0)
+			
+			elif self.jump_count:
+				self.jumped = True
+				self.velocity[1] = -3
+				self.jump_count -= 1
+				self.air_time = 8
 
-		return False
+		return self.jumped
 
 		
 	def dash(self):
-		if not self.dashing:
+		if not self.dashing and not self.died:
 			self.game.sounds["dash"].play()
 			self.dashing = -60 if self.facing_left else 60

@@ -37,5 +37,5 @@ def show_running_threads():
 
 
 if __name__ == '__main__':
-	a = {"up": False, "down": False, "left": False, "right": False}
-	print(all(value for value in a.values()))
+	a = "Helllow|World|"
+	del a.a

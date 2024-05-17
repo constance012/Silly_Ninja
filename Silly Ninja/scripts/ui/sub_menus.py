@@ -17,6 +17,7 @@ AZURE4 = pygame.Color("azure4")
 DARK_SLATE_GRAY = pygame.Color("darkslategray")
 DARK_GOLDEN_ROD = pygame.Color("darkgoldenrod")
 FOREST_GREEN = pygame.Color("forestgreen")
+FIRE_BRICK = pygame.Color("firebrick")
 
 WIDTH, HEIGHT = 640, 480
 CENTER = WIDTH / 2
@@ -433,12 +434,14 @@ class Lobby(MenuBase):
 		for i in range(MAX_CLIENT_COUNT):
 			player = self.game_players[i]
 			# Update player slots when new players joined.
-			if player.initialized and self.player_names[i].text != player.player_name:
-				self.borders[i].color = FOREST_GREEN
-				self.player_names[i].set_text(player.player_name)
-				self.player_names[i].color = DARK_GOLDEN_ROD if player.id == "main_player" else DARK_SLATE_GRAY
-				self.player_status[i].set_text("--- Host ---" if player.client_id == "host" else "--- Connected ---")
-				self.connected_players += 1
+			if player.initialized:
+				self.borders[i].color = FOREST_GREEN if player.ready else FIRE_BRICK
+				if self.player_names[i].text != player.player_name:
+					self.player_names[i].set_text(player.player_name)
+					self.player_names[i].color = DARK_GOLDEN_ROD if player.id == "main_player" else DARK_SLATE_GRAY
+					self.player_status[i].set_text("--- Host ---" if player.client_id == "host" else "--- Connected ---")
+					self.connected_players += 1
+			
 			# Or reset slots when players left.
 			elif not player.initialized and self.player_names[i].text != "EMPTY SLOT":
 				self.borders[i].color = AZURE4
@@ -449,7 +452,10 @@ class Lobby(MenuBase):
 
 
 	def launch(self):
-		threading.Thread(target=self.game_instance.launch_session, args=(self.status_text, self.set_buttons_interactable)).start()
+		if all(player.ready for player in self.game_players[:self.connected_players]):
+			threading.Thread(target=self.game_instance.launch_session, args=(self.status_text, self.set_buttons_interactable)).start()
+		else:
+			self.status_text.set_text("[WAITING]: Players joining, can not launch.")
 
 
 	def set_buttons_interactable(self, state):
