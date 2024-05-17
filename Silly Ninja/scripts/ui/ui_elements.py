@@ -137,6 +137,16 @@ class Button(UIBase):
 		self.interactable = True
 
 
+	def click(self, surface, fade_alpha):
+		if self.fade_out:
+			fade_out((surface.get_width(), surface.get_height()), surface, color=BLACK)
+			fade_alpha = 255
+		
+		self.reset_state()
+		self.on_click(*self.args)
+		return fade_alpha
+
+
 	def update(self, surface, fade_alpha, mx, my, click):
 		if self.interactable:
 			if self.rect.collidepoint((mx, my)):
@@ -144,12 +154,7 @@ class Button(UIBase):
 				self.rect.w = min(self.width + 20, self.rect.w + self.expand_speed)
 
 				if click and self.on_click is not None:
-					if self.fade_out:
-						fade_out((surface.get_width(), surface.get_height()), surface, color=BLACK)
-						fade_alpha = 255
-					
-					self.reset_state()
-					self.on_click(*self.args)
+					fade_alpha = self.click(surface, fade_alpha)
 			
 			elif self.rect.w != self.width:
 				self.text_color = WHITE

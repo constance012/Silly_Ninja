@@ -72,7 +72,20 @@ class MenuBase:
 		self.running = False
 
 
-class HostMenu(MenuBase):
+class SubMenuBase(MenuBase):
+	def __init__(self):
+		super().__init__()
+		self.back_button = Button("Back", "gamer", (220, 390), (150, 60), on_click=self.back_out)
+
+
+	def handle_events(self, event):
+		super().handle_events(event)
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_ESCAPE:
+				self.back_button.click(MenuBase.screen, self.fade_alpha)
+
+
+class HostMenu(SubMenuBase):
 	def __init__(self):
 		super().__init__()
 		self.default_ip = socket.gethostbyname(socket.gethostname())
@@ -96,7 +109,6 @@ class HostMenu(MenuBase):
 
 		self.status_text = Text("", "retro gaming", (CENTER, 360), size=13, color=pygame.Color("crimson"))
 
-		self.back_button = Button("Back", "gamer", (220, 390), (150, 60), on_click=self.back_out)
 		self.start_button = Button("Start", "gamer", (420, 390), (150, 60), on_click=self.start_hosting, fade_out=False)
 
 
@@ -207,7 +219,7 @@ class HostMenu(MenuBase):
 		self.status_text.set_text("")
 
 
-class JoinMenu(MenuBase):
+class JoinMenu(SubMenuBase):
 	def __init__(self):
 		super().__init__()
 		self.default_port = 5050
@@ -229,7 +241,6 @@ class JoinMenu(MenuBase):
 
 		self.status_text = Text("", "retro gaming", (CENTER, 360), size=13, color=pygame.Color("crimson"))
 
-		self.back_button = Button("Back", "gamer", (220, 390), (150, 60), on_click=self.back_out)
 		self.join_button = Button("Join", "gamer", (420, 390), (150, 60), on_click=self.try_joining, fade_out=False)
 
 
@@ -338,7 +349,7 @@ class JoinMenu(MenuBase):
 		self.status_text.set_text("")
 
 
-class Lobby(MenuBase):
+class Lobby(SubMenuBase):
 	def __init__(self, game_instance, server=None, is_host=False):
 		super().__init__()
 
@@ -377,10 +388,10 @@ class Lobby(MenuBase):
 		self.status_text = Text("", "retro gaming", (CENTER, 365), size=13, color=pygame.Color("crimson"))
 
 		if self.is_host:
-			self.back_button = Button("Back", "gamer", (220, 390), (150, 60), on_click=self.back_out)
 			self.launch_button = Button("Launch", "gamer", (420, 390), (150, 60), on_click=self.launch, fade_out=False)
 		else:
-			self.back_button = Button("Back", "gamer", (CENTER, 390), (150, 60), on_click=self.back_out)
+			self.back_button.pos = (CENTER, 390)
+			self.back_button.display_text.pos = (CENTER, 390)
 
 
 	def run(self):

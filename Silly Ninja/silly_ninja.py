@@ -25,7 +25,7 @@ class MainMenu(MenuBase):
 
 		# UI Elements.
 		self.title = BorderedText("SILLY NINJA", "retro gaming", (CENTER, 30), size=70, bold=True)
-		self.version_text = Text("----- Beta v0.9 -----", "retro computer", (CENTER, 130), size=15)
+		self.version_text = Text("----- Released v1.0 -----", "retro computer", (CENTER, 130), size=15)
 
 		self.solo_button = Button("Solo", "gamer", (CENTER, 180), (150, 60), on_click=self.game_solo.run)
 		self.join_button = Button("Join", "gamer", (CENTER, 250), (150, 60), on_click=self.join_menu.run)

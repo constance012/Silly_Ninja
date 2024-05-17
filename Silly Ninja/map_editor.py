@@ -110,8 +110,7 @@ class EditorMenu(MenuBase):
 
 	def handle_events(self, event):
 		super().handle_events(event)
-		if event.type == pygame.KEYDOWN:
-			self.map_id_field.handle_key_pressed(event)
+		self.map_id_field.handle_key_pressed(event)
 
 
 class MapEditor:
@@ -257,16 +256,16 @@ class MapEditor:
 					if event.key == pygame.K_ESCAPE:
 						running = False
 						fade_out((self.display.get_width(), self.display.get_height()), self.display)
-					if event.key == pygame.K_a:
+					if event.key == pygame.K_a or event.key == pygame.K_LEFT:
 						self.movement[0] = True
-					if event.key == pygame.K_d:
+					if event.key == pygame.K_d or event.key == pygame.K_RIGHT:
 						self.movement[1] = True
-					if event.key == pygame.K_w:
+					if event.key == pygame.K_w or event.key == pygame.K_UP:
 						self.movement[2] = True
-					if event.key == pygame.K_s:
+					if event.key == pygame.K_s or event.key == pygame.K_DOWN:
 						self.movement[3] = True
 						print(MAP_ID)
-						if self.control_held:
+						if self.control_held and event.key == pygame.K_s:
 							self.tilemap.save(f"assets/maps/{MAP_ID}.json")
 					if self.control_held and event.key == pygame.K_r:
 						self.tilemap.ruletile()
@@ -278,13 +277,13 @@ class MapEditor:
 						self.control_held = True
 
 				if event.type == pygame.KEYUP:
-					if event.key == pygame.K_a:
+					if event.key == pygame.K_a or event.key == pygame.K_LEFT:
 						self.movement[0] = False
-					if event.key == pygame.K_d:
+					if event.key == pygame.K_d or event.key == pygame.K_RIGHT:
 						self.movement[1] = False
-					if event.key == pygame.K_w:
+					if event.key == pygame.K_w or event.key == pygame.K_UP:
 						self.movement[2] = False
-					if event.key == pygame.K_s:
+					if event.key == pygame.K_s or event.key == pygame.K_DOWN:
 						self.movement[3] = False
 					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
 						self.shift_held = False

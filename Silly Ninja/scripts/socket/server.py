@@ -1,6 +1,5 @@
 import threading
 import socket
-import requests
 import time
 
 from datetime import datetime
@@ -44,18 +43,6 @@ class SocketServer:
 
 	def get_nickname_at(self, index):
 		return self.nicknames[index]
-
-
-	def get_public_ip(self):
-		try:
-			response = requests.get("https://httpbin.org/ip")
-			if response.status_code == 200:
-				response_json = response.json()
-				return response_json["origin"]
-			else:
-				print(f"Failed to retrieve IP - Status Code: {response.status_code}")
-		except Exception as e:
-			print(f"An Error occurs: {e}")
 
 
 	def broadcast(self, message):
