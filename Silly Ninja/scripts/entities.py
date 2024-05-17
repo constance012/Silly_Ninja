@@ -260,10 +260,9 @@ class Player(PhysicsEntity):
 
 
 	def update(self, tilemap, movement=(0, 0), override_pos=(0, 0)):
+		super().update(tilemap, movement=movement)
 		if tuple(self.pos) != override_pos and override_pos != (0, 0):
 			self.pos = list(override_pos)
-		
-		super().update(tilemap, movement=movement)
 
 		self.name_text.update_pos((self.pos[0] + self.text_offset[0], self.pos[1] + self.text_offset[1]))
 
@@ -315,6 +314,7 @@ class Player(PhysicsEntity):
 		self.wall_slide = False
 		if (self.collisions["right"] or self.collisions["left"]) and self.air_time > 4:
 			self.wall_slide = True
+			self.jumped = False
 			self.air_time = 5
 			self.velocity[1] = min(self.velocity[1], 0.5)
 			self.facing_left = self.collisions["left"]
@@ -323,12 +323,13 @@ class Player(PhysicsEntity):
 			return
 
 		# Handle animation transitions.
-		if self.air_time > 8 and not self.wall_slide:
+		if self.air_time > 7 and not self.wall_slide:
 			self.set_action("jump")
 		elif movement[0] != 0:
 			self.set_action("run")
 		else:
 			self.set_action("idle")
+
 
 
 	def render(self, outline_surface, offset=(0, 0)):
@@ -341,20 +342,20 @@ class Player(PhysicsEntity):
 			if self.facing_left and self.last_movement[0] < 0:
 				self.velocity[0] = 2.5
 				self.velocity[1] = -2.5
-				self.air_time = 7
+				self.air_time = 5
 				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 			elif not self.facing_left and self.last_movement[0] > 0:
 				self.velocity[0] = -2.5
 				self.velocity[1] = -2.5
-				self.air_time = 7
+				self.air_time = 5
 				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 		
 		elif self.jump_count:
 			self.velocity[1] = -3
 			self.jump_count -= 1
-			self.air_time = 7
+			self.air_time = 5
 			return True
 
 		return False

@@ -71,6 +71,7 @@ class GameBase:
 		self.screenshake = 0
 
 		self.level_id = 0
+		self.max_level = len(os.listdir("assets/maps")) - 1
 		self.running = False
 
 
@@ -165,6 +166,7 @@ class MultiplayerGameBase(GameBase):
 		for player in self.entities:
 			player.game = self
 
+		self.level_id = 0
 		self.player_index = -1
 		self.client = None
 		self.connected = False
@@ -293,11 +295,11 @@ class GameForHost(MultiplayerGameBase):
 			self.screenshake = max(self.screenshake - 1, 0)
 
 			# Handle level transitions.
-			if not len(self.entities[4:]):
-				print("Entering the next level...")
+			if not len(self.entities[4:]) and self.level_id < self.max_level:
 				self.transition += 1
 				if self.transition > 30:
-					self.level_id = min(self.level_id + 1, len(os.listdir("assets/maps")) - 1)
+					print("Entering the next level...")
+					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
 				self.transition += 1
@@ -459,11 +461,11 @@ class GameForClient(MultiplayerGameBase):
 			self.screenshake = max(self.screenshake - 1, 0)
 
 			# Handle level transitions.
-			if not len(self.entities[4:]):
-				print("Entering the next level...")
+			if not len(self.entities[4:]) and self.level_id < self.max_level:
 				self.transition += 1
 				if self.transition > 30:
-					self.level_id = min(self.level_id + 1, len(os.listdir("assets/maps")) - 1)
+					print("Entering the next level...")
+					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
 				self.transition += 1
@@ -611,13 +613,14 @@ class GameSolo(GameBase):
 			self.screenshake = max(self.screenshake - 1, 0)
 
 			# Handle level transitions.
-			if not len(self.enemies):
+			if not len(self.entities[4:]) and self.level_id < self.max_level:
+				print("Entering the next level...")
 				self.transition += 1
 				if self.transition > 30:
-					self.level_id = min(self.level_id + 1, len(os.listdir("assets/maps")) - 1)
+					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
-				self.transition += 1
+				self.transition += 11
 
 			# Update the respawn timer.
 			if self.dead:
