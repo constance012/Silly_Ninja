@@ -142,26 +142,32 @@ class GameClient(ChatClient):
 		# Only update other clients' players and enemies.
 		for entity in self.entities.copy():
 			if entity.id == infos[0]:
-				# [player_ID, last_movement[0], last_movement[1], dashing, jump]
+				# [player_ID, last_movement[0], last_movement[1], pos[0], pos[1], dashing, jump, is_dead]
 				if entity.type == "player":
-					print(f"{self.client_id} updating player: {entity.id}")
-					entity.update(self.tilemap, movement=tuple(map(int, infos[1:3])))
-					entity.dashing = int(infos[3])
-					if infos[4] == "True":
+					#print(f"{self.client_id} updating player: {entity.id}")
+					entity.dashing = int(infos[5])
+					entity.died = infos[7] == "True"
+					entity.update(self.tilemap, movement=tuple(map(int, infos[1:3])), override_pos=tuple(map(float, infos[3:5])))
+					if infos[6] == "True":
 						entity.jump()
 				
-				# [enemy_ID, walking, facing_left, is_death]
-				elif entity.type == "enemy" and sender_id == "host":
-					entity.update(self.tilemap, walking=int(infos[1]), facing_left=infos[2] == "True")
-					if infos[3] == "True":
-						self.entities.remove(entity)
+				elif entity.type == "enemy":
+					# [enemy_ID, walking, facing_left, is_dead]
+					if sender_id == "host":
+						dead = entity.update(self.tilemap, walking=int(infos[1]),
+											facing_left=infos[2] == "True", was_dead=infos[3] == "True")
+						if dead:
+							self.entities.remove(entity)
+					# [enemy_ID, is_dead]
+					else:
+						entity.was_dead = infos[1] == "True"
 				return
 
 
 	def receive(self):
 		while self.running:
 			try:
-				message = self.client_socket.recv(1024).decode(FORMAT)
+				message = self.client_socket.recv(1024).decode(FORMAT).split("|")[0]
 
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException()
@@ -169,7 +175,7 @@ class GameClient(ChatClient):
 					self.client_socket.send(self.nickname.encode(FORMAT))
 				elif message == "[CLIENT_ID]":
 					self.client_socket.send(self.client_id.encode(FORMAT))
-				elif message == "[START_GAME]":
+				elif "START_GAME" in message:
 					self.game.start_game()
 				
 				elif "NEW PLAYERS JOINED" in message:
@@ -197,7 +203,7 @@ class GameClient(ChatClient):
 				
 				elif self.game_started:
 					#print(f"RECEIVED: {message}")
-					message_segments = message.split("|")[0].split(";")
+					message_segments = message.split(";")
 					sender_id = message_segments[0]
 					for segment in message_segments[1:]:
 						infos = segment.split(",")
@@ -225,17 +231,27 @@ class GameClient(ChatClient):
 					
 					# Send info of both entity types if this is the host.
 					# Otherwise only send info of the corresponding client's player.
-					# [player_ID, last_movement[0], last_movement[1], dashing, jump]
+					# [player_ID, last_movement[0], last_movement[1], pos[0], pos[1], dashing, jump, is_dead]
 					main_player = self.game.get_main_player()
 					message.append(f"player_{self.client_index + 1}," +
 									f"{main_player.last_movement[0]},{main_player.last_movement[1]}," +
+									f"{main_player.pos[0]},{main_player.pos[1]}," +
 									f"{main_player.dashing}," +
-									f"{main_player.jumped}")
+									f"{main_player.jumped}," +
+									f"{main_player.died}")
 
 					if self.client_id == "host":
-						for entity in self.entities.copy()[4:]:
-							# [enemy_ID, walking, facing_left, is_death]
-							message.append(f"{entity.id},{entity.walking},{entity.facing_left},{entity.is_death}")
+						for entity in self.entities[4:]:
+							# [enemy_ID, walking, facing_left, is_dead]
+							message.append(f"{entity.id},{entity.walking},{entity.facing_left},{entity.is_dead}")
+							if entity.is_dead:
+								self.entities.remove(entity)
+					
+					elif len(self.game.synced_enemies) > 0:
+						for enemy in self.game.synced_enemies.copy():
+							print(enemy)
+							message.append(f"{enemy.id},{enemy.is_dead}")
+							self.game.synced_enemies.remove(enemy)
 
 					# Add a delimeter between each message to avoid duplication.
 					message = f"{';'.join(message)}|"
@@ -246,7 +262,7 @@ class GameClient(ChatClient):
 
 			except Exception:
 				if self.running:
-					print(f"[ERROR]: An unexpected error occurred!\n{traceback.format_exc()}")
+					print(f"[ERROR]: An unexpected error occurred!")
 					self.disconnect()
 
 

@@ -161,8 +161,8 @@ class HostMenu(MenuBase):
 		port = self.port_field.get_submitted_text()
 		nickname = self.nickname_field.get_submitted_text()
 
-		if len(nickname) < 3:
-			self.status_text.set_text("[ERROR]: Nickname is shorter than 3 characters.")
+		if len(nickname) not in range(3, 16):
+			self.status_text.set_text("[ERROR]: Nickname must be from 3 to 15 characters.")
 
 		elif re.match(IP_REGEX, ip) and re.match(PORT_REGEX, port):
 			self.status_text.set_text("")
@@ -293,8 +293,8 @@ class JoinMenu(MenuBase):
 		port = self.port_field.get_submitted_text()
 		nickname = self.nickname_field.get_submitted_text()
 
-		if len(nickname) < 3:
-			self.status_text.set_text("[ERROR]: Nickname is shorter than 3 characters.")
+		if len(nickname) not in range(3, 16):
+			self.status_text.set_text("[ERROR]: Nickname must be from 3 to 15 characters.")
 
 		elif re.match(IP_REGEX, ip) and re.match(PORT_REGEX, port):
 			self.status_text.set_text("")

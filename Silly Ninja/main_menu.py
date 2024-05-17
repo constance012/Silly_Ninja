@@ -22,7 +22,6 @@ class MainMenu(MenuBase):
 
 		self.host_menu = HostMenu()
 		self.join_menu = JoinMenu()
-		#self.lobby = Lobby(None, None)
 
 		# UI Elements.
 		self.title = BorderedText("SILLY NINJA", "retro gaming", (CENTER, 30), size=70, bold=True)

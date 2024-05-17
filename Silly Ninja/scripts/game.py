@@ -180,7 +180,7 @@ class MultiplayerGameBase(GameBase):
 
 
 	def respawn(self):
-		self.get_main_player().pos = list(self.spawn_pos)
+		self.get_main_player().respawn(self.spawn_pos)
 		self.particles.clear()
 		self.projectiles.clear()
 		self.sparks.clear()
@@ -246,12 +246,12 @@ class GameForHost(MultiplayerGameBase):
 		status_text.set_text("[STARTING]: Initializing LAN server...")
 		set_buttons_interactable(False)
 		threading.Thread(target=self.server.start_server).start()
-		time.sleep(5)
+		time.sleep(4)
 		
 		if self.server.running:
 			status_text.set_text("[CREATING]: Server started, creating lobby...")
 			threading.Thread(target=self.client.connect).start()
-			time.sleep(5)
+			time.sleep(4)
 			
 			if self.connected:
 				status_text.set_text("[JOINING]: Lobby created, joining...")
@@ -266,6 +266,7 @@ class GameForHost(MultiplayerGameBase):
 
 
 	def shutdown_server(self):
+		self.running = False
 		self.connected = False
 		for i in range(MAX_CLIENT_COUNT):
 			self.entities[i].unregister_client(i)
@@ -278,7 +279,7 @@ class GameForHost(MultiplayerGameBase):
 		status_text.set_text("[LAUNCHING]: Starting game session...")
 		set_buttons_interactable(False)
 		time.sleep(3)
-		self.client.send_manually("[START_GAME]")
+		self.client.send_manually("*[START_GAME]")
 		set_buttons_interactable(True)
 
 
@@ -318,10 +319,8 @@ class GameForHost(MultiplayerGameBase):
 
 			# Update and render the enemies on the main loop, only for the host.
 			for enemy in self.entities[4:]:
-				died = enemy.update(self.tilemap, movement=(0, 0))
+				enemy.update(self.tilemap, movement=(0, 0))
 				enemy.render(self.outline_display, offset=render_scroll)
-				if died:
-					self.entities.remove(enemy)
 
 			# Update and render the main player and other initialized players.
 			if not self.dead:
@@ -329,7 +328,7 @@ class GameForHost(MultiplayerGameBase):
 				self.get_main_player().render(self.outline_display, offset=render_scroll)
 			
 			for player in self.entities[:4]:
-				if player.initialized and player.id != "main_player":
+				if player.initialized and player.id != "main_player" and not player.died:
 					player.render(self.outline_display, offset=render_scroll)
 
 			# Render the gun projectiles.
@@ -344,19 +343,27 @@ class GameForHost(MultiplayerGameBase):
 				elif projectile.alive_time > 360:
 					self.projectiles.remove(projectile)
 				
-				# If the player gets shot.
-				elif abs(self.get_main_player().dashing) < 50 and self.get_main_player().rect().collidepoint(projectile.pos):
-					self.projectiles.remove(projectile)
-					self.dead += 1
-					self.screenshake = max(self.screenshake, 16)
-					self.sounds["hit"].play()
-					for i in range(30):
-						angle = random.random() * math.pi * 2
-						self.sparks.append(Spark(self.get_main_player().rect().center, angle, random.random() + 2))
+				# Check if any player gets shot.
+				else:
+					for player in self.entities[:4]:
+						if abs(player.dashing) < 50 and player.rect().collidepoint(projectile.pos):
+							self.projectiles.remove(projectile)
+							self.sounds["hit"].play()
+							if player.id == "main_player":
+								self.get_main_player().died = True
+								self.dead += 1
+								self.screenshake = max(self.screenshake, 16)
+							
+							# Generate sparks and dust.
+							for i in range(30):
+								angle = random.random() * math.pi * 2
+								self.sparks.append(Spark(player.rect().center, angle, random.random() + 2))
 
-						speed = random.random() * 5
-						velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
-						self.particles.append(Particle(self, "dust", self.get_main_player().rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
+								speed = random.random() * 5
+								velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
+								self.particles.append(Particle(self, "dust", player.rect().center,
+																velocity=velocity, start_frame=random.randint(0, 7)))
+							break
 
 			self.render_effects(render_scroll)
 
@@ -378,9 +385,10 @@ class GameForHost(MultiplayerGameBase):
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
 						self.movement[1] = True
 					if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
+						self.get_main_player().jumped = True
 						if self.get_main_player().jump():
 							self.sounds["jump"].play()
-					if event.key == pygame.K_LSHIFT:
+					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
 						self.get_main_player().dash()
 				
 				if event.type == pygame.KEYUP:
@@ -396,7 +404,7 @@ class GameForHost(MultiplayerGameBase):
 
 			# Render the players' name tags over anything else.
 			for player in self.entities[:4]:
-				if player.initialized:
+				if player.initialized and not player.died:
 					player.render_name_tag(self.normal_display, offset=render_scroll)
 
 			# Finally, scale and blit all of them on the main screen, along with the screenshake effect.
@@ -411,6 +419,7 @@ class GameForClient(MultiplayerGameBase):
 	def initialize(self, host_ip, port, nickname):
 		super().initialize()
 		self.client = GameClient(self, "client_unverified", ip=host_ip, port=port, nickname=nickname)
+		self.synced_enemies = []
 
 
 	def join_lobby(self, status_text, set_buttons_interactable):
@@ -430,7 +439,9 @@ class GameForClient(MultiplayerGameBase):
 
 
 	def disconnect_from_server(self):
+		self.running = False
 		self.connected = False
+		self.synced_enemies.clear()
 		for i in range(MAX_CLIENT_COUNT):
 			self.entities[i].unregister_client(i)
 		self.client.disconnect()
@@ -482,7 +493,7 @@ class GameForClient(MultiplayerGameBase):
 				self.get_main_player().render(self.outline_display, offset=render_scroll)
 			
 			for player in self.entities[:4]:
-				if player.initialized and player.id != "main_player":
+				if player.initialized and player.id != "main_player" and not player.died:
 					player.render(self.outline_display, offset=render_scroll)
 
 			# Render the gun projectiles.
@@ -497,19 +508,27 @@ class GameForClient(MultiplayerGameBase):
 				elif projectile.alive_time > 360:
 					self.projectiles.remove(projectile)
 				
-				# If the player gets shot.
-				elif abs(self.get_main_player().dashing) < 50 and self.get_main_player().rect().collidepoint(projectile.pos):
-					self.projectiles.remove(projectile)
-					self.dead += 1
-					self.screenshake = max(self.screenshake, 16)
-					self.sounds["hit"].play()
-					for i in range(30):
-						angle = random.random() * math.pi * 2
-						self.sparks.append(Spark(self.get_main_player().rect().center, angle, random.random() + 2))
+				# Check if any player gets shot.
+				else:
+					for player in self.entities[:4]:
+						if abs(player.dashing) < 50 and player.rect().collidepoint(projectile.pos):
+							self.projectiles.remove(projectile)
+							self.sounds["hit"].play()
+							if player.id == "main_player":
+								self.get_main_player().died = True
+								self.dead += 1
+								self.screenshake = max(self.screenshake, 16)
+							
+							# Generate sparks and dust.
+							for i in range(30):
+								angle = random.random() * math.pi * 2
+								self.sparks.append(Spark(player.rect().center, angle, random.random() + 2))
 
-						speed = random.random() * 5
-						velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
-						self.particles.append(Particle(self, "dust", self.get_main_player().rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
+								speed = random.random() * 5
+								velocity = [math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5]
+								self.particles.append(Particle(self, "dust", player.rect().center,
+																velocity=velocity, start_frame=random.randint(0, 7)))
+							break
 
 			self.render_effects(render_scroll)
 
@@ -531,9 +550,10 @@ class GameForClient(MultiplayerGameBase):
 					if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
 						self.movement[1] = True
 					if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
+						self.get_main_player().jumped = True
 						if self.get_main_player().jump():
 							self.sounds["jump"].play()
-					if event.key == pygame.K_LSHIFT:
+					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
 						self.get_main_player().dash()
 				
 				if event.type == pygame.KEYUP:
@@ -549,7 +569,7 @@ class GameForClient(MultiplayerGameBase):
 
 			# Render the players' name tags over anything else.
 			for player in self.entities[:4]:
-				if player.initialized:
+				if player.initialized and not player.died:
 					player.render_name_tag(self.normal_display, offset=render_scroll)
 
 			# Finally, scale and blit all of them on the main screen, along with the screenshake effect.
@@ -563,7 +583,7 @@ class GameForClient(MultiplayerGameBase):
 class GameSolo(GameBase):
 	def __init__(self, clock, screen, outline_display, normal_display):
 		super().__init__(clock, screen, outline_display, normal_display)
-		self.player = Player("", self, (50, 50), (8, 15))
+		self.player = Player("You", self, (50, 50), (8, 15))
 		self.start_game()
 
 
@@ -670,7 +690,7 @@ class GameSolo(GameBase):
 					if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
 						if self.player.jump():
 							self.sounds["jump"].play()
-					if event.key == pygame.K_LSHIFT:
+					if event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
 						self.player.dash()
 				if event.type == pygame.KEYUP:
 					if event.key == pygame.K_LEFT or event.key == pygame.K_a:
@@ -684,7 +704,8 @@ class GameSolo(GameBase):
 			self.normal_display.blit(self.outline_display, (0, 0))
 
 			# Render world UI over anything else.
-			self.player.name_text.render(self.normal_display, offset=render_scroll)
+			if not self.dead:
+				self.player.name_text.render(self.normal_display, offset=render_scroll)
 
 			# Finally, scale and blit all of them on the main screen, along with the screenshake effect.
 			screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)

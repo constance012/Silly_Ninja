@@ -151,8 +151,10 @@ class GameServer(SocketServer):
 		self.server.close()
 
 
-	def broadcast(self, sender_id, message, sendall=False):
+	def broadcast(self, sender_id, message):
 		# Broadcast the message to all connected clients, except the sender.
+		# Send to all clients if the message starts with an asterisk.
+		sendall = message.startswith("*")
 		for client_id in self.clients:
 			if client_id != sender_id or sendall:
 				self.clients[client_id].send(message.encode(FORMAT))
@@ -166,7 +168,7 @@ class GameServer(SocketServer):
 		self.nicknames.remove(nickname)
 		print(self.nicknames)
 		
-		self.broadcast(removed_id, f"PLAYER LEFT:{removed_index}")
+		self.broadcast(removed_id, f"PLAYER LEFT:{removed_index}|")
 		
 		""" Sort other clients up only if the removed the client is not the host
 		or the most recently connected one. """
@@ -185,7 +187,7 @@ class GameServer(SocketServer):
 			names = ','.join(self.nicknames)
 			ids = ','.join(self.client_ids)
 			for client_id in self.clients:
-				self.clients[client_id].send(f"RE_INITIALIZE:{index};{client_id};{names};{ids}".encode(FORMAT))
+				self.clients[client_id].send(f"RE_INITIALIZE:{index};{client_id};{names};{ids}|".encode(FORMAT))
 				index += 1
 
 
@@ -198,8 +200,8 @@ class GameServer(SocketServer):
 
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException("Client disconnected.")
-				elif message == "[START_GAME]":
-					self.broadcast(client_id, message, sendall=True)
+				elif "START_GAME" in message:
+					self.broadcast(client_id, message)
 				else:
 					self.broadcast(client_id, message)
 			except Exception:
@@ -232,9 +234,9 @@ class GameServer(SocketServer):
 		client_index = self.client_count() - 1
 		print(f"Client Count: {self.client_count()}")
 		print(f"Index for {nickname}: {client_index}")
-		self.broadcast(client_id, f"NEW PLAYERS JOINED:{client_index};{client_id};" +
+		self.broadcast(client_id, f"*NEW PLAYERS JOINED:{client_index};{client_id};" +
 								f"{','.join(self.nicknames)};" +
-								f"{','.join(self.client_ids)}", sendall=True)
+								f"{','.join(self.client_ids)}|")
 
 		threading.Thread(target=self.handle_client, args=(client, address)).start()
 

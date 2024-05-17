@@ -5,6 +5,11 @@ import pygame
 from scripts.visual_effects import Particle, Projectile, Spark
 from scripts.ui.ui_elements import Text
 
+
+DARK_SLATE_GRAY = pygame.Color("darkslategray")
+DARK_GOLDEN_ROD = pygame.Color("darkgoldenrod")
+
+
 class PhysicsEntity:
 	def __init__(self, game, entity_type, pos, size, id="", client_id="solo"):
 		self.id = id
@@ -91,11 +96,37 @@ class Enemy(PhysicsEntity):
 	def __init__(self, game, pos, size, id="", client_id="solo"):
 		super().__init__(game, "enemy", pos, size, id=id, client_id=client_id)
 		self.walking = 0
-		self.is_death = False
+		self.was_dead = False
+		self.is_dead = False
+		self.fired = False
 		self.set_action("idle")
 
 
-	def update(self, tilemap, movement=(0, 0), walking=0, facing_left=False):
+	def __repr__(self):
+		return f"Enemy: [ID={self.id:<12}, Client_ID={self.client_id:<9}, IS_DEAD={self.is_dead!s:<5}]"
+
+
+	def fire_projectile(self, player):
+		dist = (player.pos[0] - self.pos[0], player.pos[1] - self.pos[1])
+		if abs(dist[1]) < 16:
+			if self.facing_left and dist[0] < 0:
+				bullet = Projectile(self.game, (self.rect().centerx - 7, self.rect().centery), -1.5, alive_time=0)
+				self.game.projectiles.append(bullet)
+				self.game.sounds["shoot"].play()
+				for i in range(4):
+					self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5 + math.pi, random.random() + 2))
+			if not self.facing_left and dist[0] > 0:
+				bullet = Projectile(self.game, (self.rect().centerx + 7, self.rect().centery), 1.5, alive_time=0)
+				self.game.projectiles.append(bullet)
+				self.game.sounds["shoot"].play()
+				for i in range(4):
+					self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5, random.random() + 2))
+			return True
+
+		return False
+
+
+	def update(self, tilemap, movement=(0, 0), walking=0, facing_left=False, was_dead=False):
 		# Continue previous movement, if doesn't finish yet.
 		if self.walking:
 			# Check for flipping against ground and wall tiles in front of the moving direction.
@@ -107,23 +138,15 @@ class Enemy(PhysicsEntity):
 			else:
 				self.facing_left = not self.facing_left
 			
-			# Fires projectiles at the player.
+			# Fires projectiles at the closest player.
 			self.walking = max(self.walking - 1, 0)
 			if not self.walking:
-				dist = (self.game.get_main_player().pos[0] - self.pos[0], self.game.get_main_player().pos[1] - self.pos[1])
-				if abs(dist[1]) < 16:
-					if self.facing_left and dist[0] < 0:
-						bullet = Projectile(self.game, (self.rect().centerx - 7, self.rect().centery), -1.5, alive_time=0)
-						self.game.projectiles.append(bullet)
-						self.game.sounds["shoot"].play()
-						for i in range(4):
-							self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5 + math.pi, random.random() + 2))
-					if not self.facing_left and dist[0] > 0:
-						bullet = Projectile(self.game, (self.rect().centerx + 7, self.rect().centery), 1.5, alive_time=0)
-						self.game.projectiles.append(bullet)
-						self.game.sounds["shoot"].play()
-						for i in range(4):
-							self.game.sparks.append(Spark(bullet.pos, random.random() - 0.5, random.random() + 2))
+				if self.client_id != "solo":
+					for player in self.game.entities[:4]:
+						if self.fire_projectile(player):
+							break
+				else:
+					self.fire_projectile(self.game.get_main_player())
 		
 		# Randomize movement, only for the solo and host clients.
 		elif random.random() < 0.01 and "client" not in self.client_id:
@@ -143,9 +166,11 @@ class Enemy(PhysicsEntity):
 		else:
 			self.set_action("idle")
 
-		# Dies if takes damage from the player's dash.
-		if abs(self.game.get_main_player().dashing) >= 50:
-			if self.rect().colliderect(self.game.get_main_player().rect()):
+		# Dies if takes damage from the player's dash or was dead on other clients' machines.
+		if not self.was_dead:
+			self.was_dead = was_dead
+		if abs(self.game.get_main_player().dashing) >= 50 or self.was_dead:
+			if self.rect().colliderect(self.game.get_main_player().rect()) or self.was_dead:
 				self.game.screenshake = max(self.game.screenshake, 16)
 				self.game.sounds["hit"].play()
 				for i in range(20, 31):
@@ -157,9 +182,12 @@ class Enemy(PhysicsEntity):
 					self.game.particles.append(Particle(self.game, "dust", self.rect().center, velocity=velocity, start_frame=random.randint(0, 7)))
 				self.game.sparks.append(Spark(self.rect().center, 0, random.random() + 5))
 				self.game.sparks.append(Spark(self.rect().center, math.pi, random.random() + 5))
-				self.is_death = True
 
-		return self.is_death
+				self.is_dead = True
+				if "client" in self.client_id and not self.was_dead:
+					self.game.synced_enemies.append(self)
+
+		return self.is_dead
 
 
 	def render(self, surface, offset=(0, 0)):
@@ -181,12 +209,14 @@ class Player(PhysicsEntity):
 		self.air_time = 0
 		self.jump_count = 1
 		self.dashing = 0
+
 		self.wall_slide = False
 		self.jumped = False
+		self.died = False
 
 		self.player_name = player_name
-		self.name_text = Text(self.player_name, "gamer", self.pos, size=10, color=(255, 255, 255))
-		self.text_offset = (4, -12)
+		self.name_text = Text(self.player_name, "gamer", self.pos, size=15, color=DARK_SLATE_GRAY)
+		self.text_offset = (4, -15)
 		self.initialized = False
 
 		if self.client_id == "solo":
@@ -194,15 +224,18 @@ class Player(PhysicsEntity):
 
 
 	def __repr__(self):
-		return f"Player: [ID={self.id:<12}, Client_ID={self.client_id:<9}, Nickname={self.player_name:<20}, Initialized={self.initialized!s:<5}]"
+		return f"Player: [ID={self.id:<12}, Client_ID={self.client_id:<9}, Nickname={self.player_name:^20}, Initialized={self.initialized!s:<5}]"
 
 
 	def initialize_client(self, nickname, client_id, player_id, re_initialized=False):
 		if not self.initialized or re_initialized:
 			self.player_name = nickname
-			self.name_text.set_text(self.player_name)
 			self.client_id = client_id
 			self.id = player_id
+			self.name_text.set_text(self.player_name)
+			if self.id == "main_player":
+				self.name_text.color = DARK_GOLDEN_ROD
+			
 			self.initialized = True
 			self.set_action("idle")
 
@@ -210,23 +243,34 @@ class Player(PhysicsEntity):
 	def unregister_client(self, client_index):
 		self.player_name = f"unnamed_player_{client_index + 1}"
 		self.name_text.set_text(self.player_name)
+		self.name_text.color = DARK_SLATE_GRAY
 		self.id = f"player_{client_index + 1}"
 		self.client_id = ""
 		self.initialized = False
+
+
+	def respawn(self, spawn_pos):
+		self.pos = list(spawn_pos)
+		self.died = False
+		self.air_time = 0
 
 
 	def render_name_tag(self, surface, offset=(0, 0)):
 		self.name_text.render(surface, offset=offset)
 
 
-	def update(self, tilemap, movement=(0, 0)):
+	def update(self, tilemap, movement=(0, 0), override_pos=(0, 0)):
+		if tuple(self.pos) != override_pos and override_pos != (0, 0):
+			self.pos = list(override_pos)
+		
 		super().update(tilemap, movement=movement)
 
 		self.name_text.update_pos((self.pos[0] + self.text_offset[0], self.pos[1] + self.text_offset[1]))
 
 		# Handle air time and reset when grounded.
 		self.air_time += 1
-		if self.air_time > 120 and self.id == "main_player":
+		if self.air_time > 120 and (self.id == "main_player" or self.client_id == "solo"):
+			self.died = True
 			self.game.dead += 1
 			self.game.screenshake = max(self.game.screenshake, 16)
 
@@ -279,7 +323,7 @@ class Player(PhysicsEntity):
 			return
 
 		# Handle animation transitions.
-		if self.air_time > 4:
+		if self.air_time > 8 and not self.wall_slide:
 			self.set_action("jump")
 		elif movement[0] != 0:
 			self.set_action("run")
@@ -293,25 +337,24 @@ class Player(PhysicsEntity):
 
 
 	def jump(self):
-		self.jumped = True
 		if self.wall_slide:
 			if self.facing_left and self.last_movement[0] < 0:
 				self.velocity[0] = 2.5
 				self.velocity[1] = -2.5
-				self.air_time = 5
+				self.air_time = 7
 				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 			elif not self.facing_left and self.last_movement[0] > 0:
 				self.velocity[0] = -2.5
 				self.velocity[1] = -2.5
-				self.air_time = 5
+				self.air_time = 7
 				self.jump_count = max(self.jump_count - 1, 0)
 				return True
 		
 		elif self.jump_count:
 			self.velocity[1] = -3
 			self.jump_count -= 1
-			self.air_time = 5
+			self.air_time = 7
 			return True
 
 		return False
