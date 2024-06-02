@@ -43,16 +43,30 @@ class Tilemap:
 		self.tile_size = tile_size
 		self.map = {}  # Tiles which the player can physically collide with.
 		self.offgrid_tiles = []  # Background tiles, decorations.
+		self.is_empty = True
 
 
-	def save(self, path):
-		f = open(path, 'w')
+	def package_as_dict(self, as_json=False):
 		out = {
 			"tilemap": {tile_loc: self.map[tile_loc].__dict__() for tile_loc in self.map},
 			"tile_size": self.tile_size,
 			"offgrid_tiles": [tile.__dict__() for tile in self.offgrid_tiles]
 		}
-		json.dump(out, f, indent=4)
+
+		if as_json:
+			return json.dumps(out)
+		return out
+
+
+	def save(self, path, override_content=None):
+		f = open(path, 'w')
+
+		if override_content is not None:
+			override_content = json.loads(override_content)
+		else:
+			override_content = self.package_as_dict()
+		
+		json.dump(override_content, f, indent=4)
 		f.close()
 		print("Map SAVED at: " + path)
 
@@ -73,6 +87,8 @@ class Tilemap:
 
 		for offgrid_tile in map_data["offgrid_tiles"]:
 			self.offgrid_tiles.append(Tile(offgrid_tile["type"], offgrid_tile["variant"], offgrid_tile["pos"]))
+
+		self.is_empty = False
 
 
 	def extract(self, id_pairs, keep=False):

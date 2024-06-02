@@ -9,7 +9,25 @@ import pygame
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "!leave"
 MAX_CLIENT_COUNT = 4
+BUFFER_SIZE = 1024
 os.system("")  # Enable ANSI escape characters in terminal.
+
+
+def recvall(socket):
+	try:
+		data = b""
+		while True:
+			segment = socket.recv(BUFFER_SIZE)
+			data += segment
+			if len(segment) < BUFFER_SIZE:
+				break
+		return data
+	except (ConnectionError, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError):
+		print("[CLOSED]: Server has shutdown.")
+		return b""
+	except Exception:
+		print(f"[ERROR]: An error occurred when trying to disconnect from the server.\n{traceback.format_exc()}")
+		return b""
 
 
 class ClientDisconnectException(Exception):
@@ -28,7 +46,7 @@ class ChatClient:
 	def receive(self):
 		while self.running:
 			try:
-				message = self.client_socket.recv(1024).decode(FORMAT)
+				message = recvall(self.client_socket).decode(FORMAT)
 				if message == "NICKNAME":
 					self.client_socket.send(self.nickname.encode(FORMAT))
 				elif message == DISCONNECT_MESSAGE:
@@ -163,7 +181,7 @@ class GameClient(ChatClient):
 	def receive(self):
 		while self.running:
 			try:
-				message = self.client_socket.recv(1024).decode(FORMAT)
+				message = recvall(self.client_socket).decode(FORMAT)
 				#print(f"RECEIVED: {message}")
 				message = message.split("|")[0]
 
@@ -177,6 +195,9 @@ class GameClient(ChatClient):
 					self.game.start_game()
 				elif "PLAYER READY" in message:
 					self.game.ready_for_launch()
+
+				elif "SYNCED MAP" in message:
+					self.game.sync_map(message.split("::")[1])
 				
 				elif "NEW PLAYERS JOINED" in message:
 					# [str(index), str(client_id), str(nicknames), str(client_ids)]

@@ -70,13 +70,13 @@ class GameBase:
 
 		self.screenshake = 0
 
-		self.level_id = 0
+		self.level_id = -1
 		self.max_level = len(os.listdir("assets/maps")) - 1
 		self.running = False
 
 
 	def load_level(self, id):
-		self.tilemap.load(f"assets/maps/{id}.json")
+		self.tilemap.load(f"assets/maps/map_{id}.json")
 		self.leaf_spawners = []
 		for tree in self.tilemap.extract([("large_decor", 2)], keep=True):
 			self.leaf_spawners.append(pygame.Rect(tree.pos[0] + 4, tree.pos[1] + 4, 23, 13))
@@ -166,11 +166,12 @@ class MultiplayerGameBase(GameBase):
 		for player in self.entities:
 			player.game = self
 
-		self.level_id = 0
+		self.level_id = -1
 		self.player_index = -1
 		self.client = None
 		self.connected = False
 		self.spawn_pos = (0, 0)
+		self.next_sync_done = False
 
 
 	def get_player_name(self):
@@ -235,6 +236,7 @@ class MultiplayerGameBase(GameBase):
 			else:
 				self.entities.append(Enemy(self, spawner.pos, (8, 15), id=f"enemy_{enemy_count}", client_id=self.client.client_id))
 				enemy_count += 1
+		self.next_sync_done = False
 
 
 	def disconnect_from_server(self):
@@ -256,6 +258,27 @@ class GameForHost(MultiplayerGameBase):
 		super().initialize()
 		self.server = server
 		self.client = GameClient(self, "host", ip=host_ip, port=port, nickname=nickname)
+		self.preload_tilemap = Tilemap(self, 16)
+
+
+	def request_map_syncing(self, client_id=None):
+		print("Sending map data to sync...")
+		time.sleep(2)
+		if not self.next_sync_done:
+			self.level_id = min(self.level_id + 1, self.max_level)
+			self.preload_tilemap.load(f"assets/maps/map_{self.level_id}.json")
+			self.next_sync_done = True
+		
+		if client_id is not None:
+			self.client.send_manually(f"SYNCED MAP::{self.preload_tilemap.package_as_dict(as_json=True)}>>>{client_id}|")
+		else:
+			self.client.send_manually(f"SYNCED MAP::{self.preload_tilemap.package_as_dict(as_json=True)}|")
+
+
+	def on_connection_made(self, player_index, nicknames, client_ids, re_initialized=False):
+		super().on_connection_made(player_index, nicknames, client_ids, re_initialized=re_initialized)
+		if "client" in client_ids[player_index]:
+			self.request_map_syncing(client_ids[player_index])
 
 
 	def start_server(self, status_text, set_buttons_interactable):
@@ -302,9 +325,10 @@ class GameForHost(MultiplayerGameBase):
 			# Handle level transitions.
 			if not len(self.entities[4:]) and self.level_id < self.max_level:
 				self.transition += 1
-				if self.transition > 30:
+				if self.transition == 1:
+					self.request_map_syncing()
+				elif self.transition > 30:
 					print("Entering the next level...")
-					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
 				self.transition += 1
@@ -425,6 +449,15 @@ class GameForClient(MultiplayerGameBase):
 	def initialize(self, host_ip, port, nickname):
 		super().initialize()
 		self.client = GameClient(self, "client_unverified", ip=host_ip, port=port, nickname=nickname)
+		self.sync_map_path = ""
+
+
+	def sync_map(self, map_content):
+		print("Syncing map from host...")
+		self.level_id = "synced"
+		self.sync_map_path = f"assets/maps/map_{self.level_id}.json"
+		self.tilemap.save(self.sync_map_path, map_content)
+		self.next_sync_done = True
 
 
 	def join_lobby(self, status_text, set_buttons_interactable):
@@ -444,6 +477,12 @@ class GameForClient(MultiplayerGameBase):
 		set_buttons_interactable(True)
 
 
+	def disconnect_from_server(self):
+		if os.path.exists(self.sync_map_path):
+			os.remove(self.sync_map_path)
+		super().disconnect_from_server()
+
+
 	def run(self):
 		super().run()
 
@@ -453,12 +492,11 @@ class GameForClient(MultiplayerGameBase):
 
 			self.screenshake = max(self.screenshake - 1, 0)
 
-			# Handle level transitions.
-			if not len(self.entities[4:]) and self.level_id < self.max_level:
+			# Handle level transitions, sync with the host.
+			if self.next_sync_done:
 				self.transition += 1
 				if self.transition > 30:
 					print("Entering the next level...")
-					self.level_id = min(self.level_id + 1, self.max_level)
 					self.load_level(self.level_id)
 			if self.transition < 0:
 				self.transition += 1
@@ -578,6 +616,7 @@ class GameSolo(GameBase):
 	def __init__(self, clock, screen, outline_display, normal_display):
 		super().__init__(clock, screen, outline_display, normal_display)
 		self.player = Player("", self, (50, 50), (8, 15))
+		self.level_id += 1
 		self.start_game()
 
 

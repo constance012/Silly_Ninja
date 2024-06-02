@@ -30,7 +30,8 @@ class EditorMenu(MenuBase):
 		self.sub_title = Text("----- For Silly Ninja -----", "retro computer", (CENTER, 130), size=15)
 
 		self.error_text = Text("", "retro gaming", (CENTER, 170), size=13, color=pygame.Color("crimson"))
-		self.map_id_field = InputField("gamer", (CENTER, 210), (400, 50), placeholder_text="Enter Map ID...")
+		self.note_text = Text("Name the map as \"map_[ID]\", make sure the ID follow the latest ID", "retro gaming", (CENTER, 190), size=12)
+		self.map_id_field = InputField("gamer", (CENTER, 210), (400, 50), placeholder_text="Enter Map File's Name...")
 
 		self.delete_button = Button("Delete", "gamer", (220, 310), (150, 60), on_click=self.delete_map)
 		self.edit_button = Button("Edit", "gamer", (420, 310), (150, 60), on_click=self.edit_map)
@@ -47,8 +48,11 @@ class EditorMenu(MenuBase):
 			self.title.render(MenuBase.screen)
 			self.sub_title.render(MenuBase.screen)
 
-			# Render the map id field.
+			# Render error and note texts.
 			self.error_text.render(MenuBase.screen)
+			self.note_text.render(MenuBase.screen)
+
+			# Render the map id field.
 			self.map_id_field.update(mx, my, self.click)
 			self.map_id_field.render(MenuBase.screen)
 

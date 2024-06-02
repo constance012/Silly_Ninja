@@ -37,5 +37,5 @@ def show_running_threads():
 
 
 if __name__ == '__main__':
-	a = "Helllow|World|"
-	del a.a
+	a = "asdwe"
+	print(a.split("|"))

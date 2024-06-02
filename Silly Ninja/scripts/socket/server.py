@@ -3,7 +3,7 @@ import socket
 import time
 
 from datetime import datetime
-from scripts.socket.client import ClientDisconnectException, MAX_CLIENT_COUNT
+from scripts.socket.client import ClientDisconnectException, MAX_CLIENT_COUNT, recvall
 
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "!leave"
@@ -138,6 +138,12 @@ class GameServer(SocketServer):
 		self.server.close()
 
 
+	def send_to_specific(self, message):
+		print(message)
+		client_id = message.split(">>>")[1].split("|")[0]
+		self.clients[client_id].send(message.split(">>>")[0].encode(FORMAT))
+
+
 	def broadcast(self, sender_id, message):
 		# Broadcast the message to all connected clients, except the sender.
 		# Send to all clients if the message starts with an asterisk.
@@ -185,12 +191,14 @@ class GameServer(SocketServer):
 	def handle_client(self, client, address):
 		while self.running:
 			try:
-				message = client.recv(1024).decode(FORMAT)
+				message = recvall(client).decode(FORMAT)
 				client_index = self.client_sockets.index(client)
 				client_id = self.client_ids[client_index]
 
 				if message == DISCONNECT_MESSAGE:
 					raise ClientDisconnectException("Client disconnected.")
+				elif ">>>" in message:
+					self.send_to_specific(message)
 				else:
 					self.broadcast(client_id, message)
 			except Exception:
